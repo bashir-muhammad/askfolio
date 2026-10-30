@@ -1,92 +1,186 @@
 # AskFolio
 
+## Product goal
+AskFolio is a simple AI chat application where a user can:
+- view a list of previous chats,
+- open an existing chat,
+- create a new chat,
+- send a message,
+- receive an AI reply,
+- continue a conversation in the same thread.
+
+This version targets an MVP that is easy to implement and easy to evolve.
+
 ## MVP
-The main/home page contains:
-- Header with logo, main navigation
-- Side bar with list of chats if exist
-- Main area: 
-  - Message list, display a welcome message
-  - Search box, blank and user start a new chat.
+The home screen contains:
+- Header with brand/logo and main navigation
+- Sidebar with a list of saved chats
+- Main panel with:
+  - chat title/header
+  - message list
+  - input box with send button
+  - empty state for a brand-new chat
 
+### Primary behaviors
+- User opens the app.
+- Sidebar loads previously created chats if any exist.
+- User can start a new chat.
+- User can click an existing chat in the sidebar to open it.
+- User types a message and sends it.
+- The app adds the user message to the active chat immediately.
+- The app makes a request to the AI backend.
+- The assistant response is appended to the same chat.
+- The conversation remains stored for future access.
 
-The user sends a message, then the bot answers.
-It continues in a number of chats.
+## Recommended data model
+A chat should represent a conversation thread, not alternating user/bot objects.
 
-The user may start a new chat session. Then the old chat is stored and a new chat starts. The same pattern continues.
-
-The chat history is listed in the Side bar on desktop version. On Mobile it is not decided.
-User click on one of the link and it opens the chat.
-User may click on "new chat" and new blank chat box and chat area opens.
-
-- chat = {
-  userChat: {
-    chatId: id,
-    message: string
-  },
-  botChat: {
-    chatId: id,
-    message: string
-  }
+```ts
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+  status?: 'pending' | 'sent' | 'streaming' | 'error';
 }
 
-chats: chat[];
+interface ChatSession {
+  id: string;
+  title: string;
+  messages: Message[];
+  updatedAt: string;
+}
+```
 
-### Mermaid Diagram
+Example:
+
+```ts
+const chats: ChatSession[] = [
+  {
+    id: 'chat_123',
+    title: 'Project planning',
+    updatedAt: '2026-10-30T10:00:00.000Z',
+    messages: [
+      { id: 'm1', role: 'user', content: 'Help me plan a launch', createdAt: '...' },
+      { id: 'm2', role: 'assistant', content: 'Sure — here is a plan...', createdAt: '...' }
+    ]
+  }
+];
+```
+
+This structure supports:
+- multi-turn conversations,
+- future message editing,
+- streaming responses,
+- deleting or restoring chat history,
+- persistence in local storage or backend storage.
+
+## Suggested app state lifecycle
+
+```ts
+type ActiveChatState = {
+  chats: ChatSession[];
+  activeChatId: string | null;
+  isLoading: boolean;
+  isSending: boolean;
+  error: string | null;
+};
+```
+
+### State flow
+1. App initializes.
+2. Load saved chats from local storage or API.
+3. If chats exist, select the most recent one.
+4. If no chats exist, create an empty chat session.
+5. User sends a message.
+6. Append user message to active chat.
+7. Set `isSending = true`.
+8. Send message to AI API.
+9. When the response returns, append assistant message.
+10. Save chat list.
+11. Reset loading state.
+
+## UI layout
+
+### Desktop
+- Left sidebar for chat history
+- Right main panel for conversation
+- Header with current chat title and new chat action
+
+### Mobile
+- Sidebar can collapse into a drawer or slide-over panel
+- Main conversation stays full width
+- New chat button remains visible in the header or floating action button
+
+## Flow diagram
 
 ```mermaid
 flowchart TD
-    A["User sends a message"] --> B["Create userChat object"]
-    B --> C["userChat = { chatId: id, message: string }"]
-    C --> D["Bot generates a reply"]
-    D --> E["Create botChat object"]
-    E --> F["botChat = { chatId: id, message: string }"]
-    F --> G["Store in chats: chat[]"]
-    G --> H{"New chat session?"}
-    H -- Yes --> I["Start a new chat session"]
-    I --> A
-    H -- No --> J["Continue existing chat"]
-    J --> A
+    A["User opens app"] --> B["Load saved chats"]
+    B --> C{"Chats exist?"}
+    C -- Yes --> D["Select most recent chat"]
+    C -- No --> E["Create empty chat session"]
+    D --> F["Render message list"]
+    E --> F
+    F --> G["User types message"]
+    G --> H["Submit message"]
+    H --> I["Append user message to active chat"]
+    I --> J["Send request to AI API"]
+    J --> K{"Response received?"}
+    K -- No --> L["Show error state"]
+    K -- Yes --> M["Append assistant reply to active chat"]
+    M --> N["Save updated chat session"]
+    N --> O{"User creates new chat?"}
+    O -- Yes --> E
+    O -- No --> F
 ```
 
-### Sequence Diagram
+## Sequence diagram
 
 ```mermaid
 sequenceDiagram
     actor User
-    participant App as App / Chat UI
-    participant Input as InputBox
-    participant MessageList as MessageList
-    participant UserMsg as UserMessage
-    participant BotMsg as BotMessage
-    participant Store as chats[] / Session State
+    participant UI as Chat UI
+    participant Store as Chat Store / Local Storage
+    participant API as AI API
 
-    User->>App: Open chat app
-    App->>MessageList: Render conversation list
-    MessageList->>UserMsg: Show previous user messages
-    MessageList->>BotMsg: Show previous bot replies
-    App->>Input: Show textarea + send button
+    User->>UI: Open app
+    UI->>Store: Load chats
+    Store-->>UI: Return chat list
+    UI->>User: Render sidebar + empty or active chat
 
-    User->>Input: Type message
-    User->>Input: Click send
-    Input->>App: Submit message
-    App->>Store: Create userChat object
-    Note over Store: userChat = { chatId, message }
-    App->>UserMsg: Render new user message
-    App->>Store: Create botChat object
-    Note over Store: botChat = { chatId, message }
-    App->>BotMsg: Render bot response
+    User->>UI: Click New Chat
+    UI->>Store: Create empty session
+    Store-->>UI: New active chat ID
 
-    App->>Store: Append chat to chats[]
-    Note over Store: chats: chat[]
-
-    alt New chat session
-        User->>App: Start new chat
-        App->>Store: Initialize fresh chat session
-        App->>Input: Ready for next message
-    else Continue current chat
-        User->>Input: Send another message
-        Input->>App: New message submitted
-        App->>Store: Append to same chat history
-    end
+    User->>UI: Type message
+    User->>UI: Click Send
+    UI->>Store: Append user message
+    UI->>API: Send latest user message
+    API-->>UI: Return assistant response
+    UI->>Store: Append assistant message
+    UI->>Store: Save chat history
+    UI->>User: Render updated conversation
 ```
+
+## MVP acceptance criteria
+- User can create a new chat.
+- User can open a previous chat.
+- User can send a message and receive a reply.
+- Messages persist after refresh for the MVP stage.
+- The app does not lose the active conversation state while switching chats.
+- The sidebar reflects the current list of chats.
+
+## Recommended next implementation step
+Start by implementing:
+1. chat session model,
+2. chat list state,
+3. message rendering,
+4. new chat creation,
+5. send-message flow,
+6. local persistence,
+7. AI backend integration.
+
+This keeps the MVP realistic and avoids building a fragile chat flow around temporary message objects.
+
 
