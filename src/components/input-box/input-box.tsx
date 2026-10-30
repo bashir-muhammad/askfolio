@@ -1,17 +1,18 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Send } from "lucide-react";
-import { Field, FieldLabel } from "../ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
+
 const InputBox = () => {
   return (
-    <div className="flex items-center justify-between w-full gap-4 p-4 border-t border-zinc-200 dark:border-zinc-800">
+    <div className="flex items-center justify-between w-full gap-4 p-4 ">
       <Field>
         <FieldLabel htmlFor="message" className="hidden">Message input</FieldLabel>
-        <Input type="text" id="message" placeholder="Type your message here..." />
+        <Textarea id="message" placeholder="Type your message here..." />
       </Field>
-      <Button variant="default">
-        <Send className="w-4 h-4" />
-        Send
+      <Button variant="default" size="icon-lg" >
+        <Send />
+        <span className="sr-only">Send</span>
       </Button>
     </div>
   );
