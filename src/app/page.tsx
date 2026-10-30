@@ -9,10 +9,32 @@ export default function Home() {
         <p>AI Chat</p>
         <p> Chat History</p>
       </aside>
-      <main className="flex flex-1 w-full flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <UserMessage message="Hello! How can I assist you today?" />
-        <BotMessage message="Hello! sure. lorem ipsum dolor sit amet, consectetur adipiscing elit." />
-        <InputBox />
+      <main className="flex flex-col justify-between px-16 py-4 w-full h-full ">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <UserMessage message="Hello! How can I assist you today?" />
+          <BotMessage message="Hello! sure. lore" />
+          <BotMessage message="Hello! sure. lore" />
+
+          <BotMessage message="Hello! sure. lore" />
+
+          <BotMessage message="Hello! sure. lore" />
+
+          <BotMessage message="Hello! sure. lore" />
+
+          <BotMessage message="Hello! sure. lore" />
+          <BotMessage message="Hello! sure. lore" />
+          <BotMessage message="Hello! sure. lore" />
+
+          <BotMessage message="Hello! sure. lore" />
+          <BotMessage message="Hello! sure. lore" />
+
+          <UserMessage message="Hello! How can I assist you today?" />
+          <BotMessage message="Hello! sure. lorem ipsum dolor sit amet and lurem absom" />
+
+        </div>
+        <div className="sticky bottom-4 border rounded-2xl bg-white">
+          <InputBox />
+        </div>
       </main>
     </div>
   );
