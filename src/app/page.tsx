@@ -1,6 +1,7 @@
 import InputBox from "@/components/input-box/input-box";
 import UserMessage from "@/components/user-message/user-message";
 import BotMessage from "@/components/bot-message/bot-message";
+import MessageList from "@/components/message-list/message-list";
 
 export default function Home() {
   return (
@@ -10,6 +11,7 @@ export default function Home() {
         <p> Chat History</p>
       </aside>
       <main className="flex flex-col justify-between px-16 py-4 w-full h-full ">
+        <MessageList>
         <div className="flex flex-col items-center justify-center gap-4">
           <UserMessage message="Hello! How can I assist you today?" />
           <BotMessage message="Hello! sure. lore" />
@@ -21,17 +23,15 @@ export default function Home() {
 
           <BotMessage message="Hello! sure. lore" />
 
-          <BotMessage message="Hello! sure. lore" />
-          <BotMessage message="Hello! sure. lore" />
-          <BotMessage message="Hello! sure. lore" />
-
-          <BotMessage message="Hello! sure. lore" />
-          <BotMessage message="Hello! sure. lore" />
-
-          <UserMessage message="Hello! How can I assist you today?" />
-          <BotMessage message="Hello! sure. lorem ipsum dolor sit amet and lurem absom" />
-
-        </div>
+            <BotMessage message="Hello! sure. lore" />
+            <BotMessage message="Hello! sure. lore" />
+            <BotMessage message="Hello! sure. lore" />
+            <BotMessage message="Hello! sure. lore" />
+            <BotMessage message="Hello! sure. lore" />
+            <BotMessage message="Hello! sure. lore" />
+            <BotMessage message="Hello! sure. lore last" />
+          </div>
+        </MessageList>
         <div className="sticky bottom-4 border rounded-2xl bg-white">
           <InputBox />
         </div>
