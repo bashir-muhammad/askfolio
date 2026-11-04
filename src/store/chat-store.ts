@@ -20,8 +20,16 @@ export type ChatStore = {
   createNewChat: () => void;
   setActiveChat: (chatId: string) => void;
   addChatMessage: (content: string, role?: Role) => string;
-  addChatMessageToChat: (chatId: string, content: string, role?: Role) => void;
-  updateLastMessage: (chatId: string, message: Message) => void;
+  addChatMessageToChat: (
+    chatId: string,
+    content: string,
+    role?: Role,
+  ) => string;
+  updateChatMessageContent: (
+    chatId: string,
+    messageId: string,
+    content: string,
+  ) => void;
 };
 
 const id = () => Math.random().toString(36).slice(2, 10);
@@ -115,23 +123,26 @@ export const useChatStore = create<ChatStore>((set) => ({
         ),
       };
     });
+    return newMessage.id;
   },
 
-  updateLastMessage: (chatId: string, message: Message) => {
+  updateChatMessageContent: (
+    chatId: string,
+    messageId: string,
+    content: string,
+  ) => {
     set((state) => ({
-      chats: state.chats.map((chat) => {
-        if (chat.id !== chatId) return chat;
-        if (chat.messages.length === 0) return chat;
-
-        const updatedMessages = [...chat.messages];
-        updatedMessages[updatedMessages.length - 1] = message;
-
-        return {
-          ...chat,
-          messages: updatedMessages,
-          updatedAt: new Date().toISOString(),
-        };
-      }),
+      chats: state.chats.map((chat) =>
+        chat.id === chatId
+          ? {
+              ...chat,
+              messages: chat.messages.map((message) =>
+                message.id === messageId ? { ...message, content } : message,
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : chat,
+      ),
     }));
   },
 }));

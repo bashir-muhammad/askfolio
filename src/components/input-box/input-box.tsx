@@ -11,33 +11,55 @@ const InputBox = () => {
   const [messageContent, setMessageContent] = useState("");
   const addChatMessage = useChatStore((s) => s.addChatMessage);
   const addChatMessageToChat = useChatStore((s) => s.addChatMessageToChat);
+  const updateChatMessageContent = useChatStore(
+    (s) => s.updateChatMessageContent,
+  );
   const [errorMessage, setErrorMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
   const onSendMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const message = messageContent.trim();
-    if (!message) {
+    if (!message || isSending) {
       return;
     }
 
     const chatId = addChatMessage(message);
+    setErrorMessage("");
+    setIsSending(true);
 
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ content: message }),
-    });
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content: message }),
+      });
 
-    if (!response.ok) {
+      if (!response.ok || !response.body) {
+        throw new Error("Chat request failed.");
+      }
+
+      const assistantMessageId = addChatMessageToChat(chatId, "", "assistant");
+      const reader = response.body
+        .pipeThrough(new TextDecoderStream())
+        .getReader();
+      let assistantContent = "";
+      setMessageContent("");
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        assistantContent += value;
+        updateChatMessageContent(chatId, assistantMessageId, assistantContent);
+      }
+    } catch {
       setErrorMessage("Failed to send message. Please try again.");
-      return;
+    } finally {
+      setIsSending(false);
     }
-
-    const data = await response.json();
-    addChatMessageToChat(chatId, data.message, "assistant");
-    setMessageContent("");
   };
 
   return (
@@ -54,13 +76,19 @@ const InputBox = () => {
           placeholder="Type your message here..."
           value={messageContent}
           onChange={(event) => setMessageContent(event.target.value)}
+          disabled={isSending}
           aria-describedby={errorMessage ? "chat-error" : undefined}
         />
         {errorMessage && (
           <FieldError id="chat-error">{errorMessage}</FieldError>
         )}
       </Field>
-      <Button variant="default" type="submit" size="icon-lg">
+      <Button
+        variant="default"
+        type="submit"
+        size="icon-lg"
+        disabled={isSending}
+      >
         <Send />
         <span className="sr-only">Send</span>
       </Button>
