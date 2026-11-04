@@ -21,21 +21,21 @@ const InputBox = () => {
 
     addChatMessage( message);
 
-    // const response = await fetch("/api/chat", {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //   },
-    //   body: JSON.stringify({ content: message }),
-    // });
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ content: message }),
+    });
 
-    // if (!response.ok) {
-    //   setErrorMessage("Failed to send message. Please try again.");
-    //   return;
-    // }
+    if (!response.ok) {
+      setErrorMessage("Failed to send message. Please try again.");
+      return;
+    }
 
-    // const data = await response.json();
-    // console.log("Bot reply:", data.message);
+    const data = await response.json();
+    addChatMessage(data.message, "assistant");
     setMessageContent("");
   };
 

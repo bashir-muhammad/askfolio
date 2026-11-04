@@ -20,7 +20,7 @@ export type ChatStore = {
   activeChatId: string | null;
   createNewChat: () => void;
   setActiveChat: (chatId: string) => void;
-  addChatMessage: (content: string) => void;
+  addChatMessage: (content: string, role?: Role) => void;
   updateLastMessage: (chatId: string, message: Message) => void;
 };
 
@@ -44,10 +44,10 @@ export const useChatStore = create<ChatStore>((set) => ({
   setActiveChat: (chatId: string) => {
     set({ activeChatId: chatId });
   },
-  addChatMessage: (content: string) => {
+  addChatMessage: (content: string, role?: Role) => {
     const newMessage: Message = {
       id: id(),
-      role: 'user',
+      role: role || 'user',
       content,
     };
 
