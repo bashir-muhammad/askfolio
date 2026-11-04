@@ -20,8 +20,6 @@ const SideBar = () => {
           </li>
         ))}
       </ul>
-      <hr className="my-4" />
-      <p>Total Chats: {chats.length}</p>
     </aside>
   );
 };

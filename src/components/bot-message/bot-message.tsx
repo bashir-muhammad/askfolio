@@ -1,4 +1,5 @@
 import { Bot } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 const BotMessage = ({ message }: { message: string }) => {
   return (
@@ -6,9 +7,11 @@ const BotMessage = ({ message }: { message: string }) => {
       <div className="flex flex-col items-start gap-1">
         <div className="flex items-center border rounded-full bg-secondary p-2 text-zinc-500 dark:text-zinc-900">
           <Bot size={16} />
-          <span className="hidden">AI Bot</span>
+          <span className="hidden">AI Assistant</span>
         </div>
-        <p className="ml-8 p-2 border rounded-lg rounded-tl-none bg-secondary  dark:text-zinc-900">{message}</p>
+        <div className="prose dark:prose-invert max-w-full ml-8 p-4 border rounded-lg rounded-tl-none bg-secondary  dark:text-zinc-900">
+          <ReactMarkdown>{message}</ReactMarkdown>
+        </div>
       </div>
     </div>
   );
