@@ -1,30 +1,46 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
-
-export type Role = 'user' | 'assistant';
+export type Role = "user" | "assistant";
 export interface Message {
   id: string;
   role?: Role;
   content: string;
-};
+}
 
 export interface Chat {
   id: string;
   title: string;
   messages: Message[];
   updatedAt?: string;
-};
+}
 
 export type ChatStore = {
   chats: Chat[];
   activeChatId: string | null;
   createNewChat: () => void;
   setActiveChat: (chatId: string) => void;
-  addChatMessage: (content: string, role?: Role) => void;
+  addChatMessage: (content: string, role?: Role) => string;
+  addChatMessageToChat: (chatId: string, content: string, role?: Role) => void;
   updateLastMessage: (chatId: string, message: Message) => void;
 };
 
 const id = () => Math.random().toString(36).slice(2, 10);
+
+const createMessage = (content: string, role: Role = "user"): Message => ({
+  id: id(),
+  role,
+  content,
+});
+
+const appendMessage = (chat: Chat, message: Message): Chat => ({
+  ...chat,
+  messages: [...chat.messages, message],
+  title:
+    chat.title === "New Chat"
+      ? message.content.substring(0, 20) || "New Chat"
+      : chat.title,
+  updatedAt: new Date().toISOString(),
+});
 
 export const useChatStore = create<ChatStore>((set) => ({
   chats: [],
@@ -37,28 +53,33 @@ export const useChatStore = create<ChatStore>((set) => ({
       messages: [],
     };
     set((state) => ({
-      chats: [ newChat, ...state.chats],
+      chats: [newChat, ...state.chats],
       activeChatId: newChat.id,
     }));
   },
   setActiveChat: (chatId: string) => {
-    set({ activeChatId: chatId });
+    set((state) =>
+      state.chats.some((chat) => chat.id === chatId)
+        ? { activeChatId: chatId }
+        : state,
+    );
   },
-  addChatMessage: (content: string, role?: Role) => {
-    const newMessage: Message = {
-      id: id(),
-      role: role || 'user',
-      content,
-    };
+  addChatMessage: (content: string, role: Role = "user") => {
+    const newMessage = createMessage(content, role);
+    let targetChatId = "";
 
     set((state) => {
-      if (!state.activeChatId) {
+      const activeChat = state.chats.find(
+        (chat) => chat.id === state.activeChatId,
+      );
+      if (!activeChat) {
         const newChat: Chat = {
           id: id(),
           title: content.substring(0, 20) || "New Chat",
           messages: [newMessage],
           updatedAt: new Date().toISOString(),
         };
+        targetChatId = newChat.id;
 
         return {
           chats: [newChat, ...state.chats],
@@ -66,17 +87,32 @@ export const useChatStore = create<ChatStore>((set) => ({
         };
       }
 
+      targetChatId = activeChat.id;
       return {
         chats: state.chats.map((chat) => {
-          if (chat.id !== state.activeChatId) return chat;
-
-          return {
-            ...chat,
-            messages: [...chat.messages, newMessage],
-            title: chat.title === "New Chat" ? content.substring(0, 20) || "New Chat" : chat.title,
-            updatedAt: new Date().toISOString(),
-          };
+          return chat.id === activeChat.id
+            ? appendMessage(chat, newMessage)
+            : chat;
         }),
+      };
+    });
+    return targetChatId;
+  },
+
+  addChatMessageToChat: (
+    chatId: string,
+    content: string,
+    role: Role = "user",
+  ) => {
+    const newMessage = createMessage(content, role);
+
+    set((state) => {
+      if (!state.chats.some((chat) => chat.id === chatId)) return state;
+
+      return {
+        chats: state.chats.map((chat) =>
+          chat.id === chatId ? appendMessage(chat, newMessage) : chat,
+        ),
       };
     });
   },
@@ -85,6 +121,7 @@ export const useChatStore = create<ChatStore>((set) => ({
     set((state) => ({
       chats: state.chats.map((chat) => {
         if (chat.id !== chatId) return chat;
+        if (chat.messages.length === 0) return chat;
 
         const updatedMessages = [...chat.messages];
         updatedMessages[updatedMessages.length - 1] = message;
@@ -97,5 +134,4 @@ export const useChatStore = create<ChatStore>((set) => ({
       }),
     }));
   },
-
 }));

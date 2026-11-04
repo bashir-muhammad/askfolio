@@ -10,6 +10,7 @@ import { useChatStore } from "@/store/chat-store";
 const InputBox = () => {
   const [messageContent, setMessageContent] = useState("");
   const addChatMessage = useChatStore((s) => s.addChatMessage);
+  const addChatMessageToChat = useChatStore((s) => s.addChatMessageToChat);
   const [errorMessage, setErrorMessage] = useState("");
 
   const onSendMessage = async (event: FormEvent<HTMLFormElement>) => {
@@ -19,7 +20,7 @@ const InputBox = () => {
       return;
     }
 
-    addChatMessage( message);
+    const chatId = addChatMessage(message);
 
     const response = await fetch("/api/chat", {
       method: "POST",
@@ -35,7 +36,7 @@ const InputBox = () => {
     }
 
     const data = await response.json();
-    addChatMessage(data.message, "assistant");
+    addChatMessageToChat(chatId, data.message, "assistant");
     setMessageContent("");
   };
 
