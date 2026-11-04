@@ -6,7 +6,9 @@ const SideBar = () => {
   const { chats, activeChatId, createNewChat, setActiveChat } = useChatStore();
   return (
     <aside className="border-r p-4 bg-white/50">
-      <Button onClick={() => createNewChat()}>New Chat</Button>
+      {chats.length > 0 && (
+        <Button onClick={() => createNewChat()}>New Chat</Button>
+      )}
       <ul className="mt-4 space-y-2">
         {chats.map((chat) => (
           <li key={chat.id}>

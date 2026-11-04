@@ -8,7 +8,7 @@ import { useChatStore } from "@/store/chat-store";
 const MessageList = () => {
   const { chats, activeChatId } = useChatStore();
   return (
-    <div className="flex flex-col items-center justify-center gap-4 h-full">
+    <div className="flex flex-col items-center justify-center gap-4 mb-6 h-full">
       {chats.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-4 p-8">
           <h2 className="text-lg">No chats yet</h2>
