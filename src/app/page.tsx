@@ -16,14 +16,15 @@ export default function Home() {
         <p>Chat title: {chats.find((chat) => chat.id === activeChatId)?.title}</p>
       </aside>
       <main className="flex flex-col justify-between px-16 py-4 w-full h-full ">
-          {JSON.stringify(chats)}
         <MessageList>
           <div className="flex flex-col items-center justify-center gap-4">
-            {chats.map((chat) => (
-              <UserMessage key={chat.id} message={chat.title} />
+            {chats.find((chat) => chat.id === activeChatId)?.messages.map((message) => (
+              message.role === "user" ? (
+                <UserMessage key={message.id} message={message.content} />
+              ) : (
+                <BotMessage key={message.id} message={message.content} />
+              )
             ))}
-            <UserMessage message="Hello! How can I assist you today?" />
-            <BotMessage message="Hello! sure. lore" />
           </div>
         </MessageList>
         <div className="sticky bottom-4 border rounded-2xl bg-white">
