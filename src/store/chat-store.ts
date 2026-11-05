@@ -24,11 +24,6 @@ export type ChatStore = {
     chatId: string,
     content: string,
     role?: Role,
-  ) => string;
-  updateChatMessageContent: (
-    chatId: string,
-    messageId: string,
-    content: string,
   ) => void;
 };
 
@@ -123,26 +118,5 @@ export const useChatStore = create<ChatStore>((set) => ({
         ),
       };
     });
-    return newMessage.id;
-  },
-
-  updateChatMessageContent: (
-    chatId: string,
-    messageId: string,
-    content: string,
-  ) => {
-    set((state) => ({
-      chats: state.chats.map((chat) =>
-        chat.id === chatId
-          ? {
-              ...chat,
-              messages: chat.messages.map((message) =>
-                message.id === messageId ? { ...message, content } : message,
-              ),
-              updatedAt: new Date().toISOString(),
-            }
-          : chat,
-      ),
-    }));
   },
 }));

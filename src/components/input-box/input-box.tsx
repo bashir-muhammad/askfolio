@@ -11,9 +11,6 @@ const InputBox = () => {
   const [messageContent, setMessageContent] = useState("");
   const addChatMessage = useChatStore((s) => s.addChatMessage);
   const addChatMessageToChat = useChatStore((s) => s.addChatMessageToChat);
-  const updateChatMessageContent = useChatStore(
-    (s) => s.updateChatMessageContent,
-  );
   const [errorMessage, setErrorMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
 
@@ -37,24 +34,19 @@ const InputBox = () => {
         body: JSON.stringify({ content: message }),
       });
 
-      if (!response.ok || !response.body) {
+      const result: unknown = await response.json();
+      if (
+        !response.ok ||
+        typeof result !== "object" ||
+        result === null ||
+        !("content" in result) ||
+        typeof result.content !== "string"
+      ) {
         throw new Error("Chat request failed.");
       }
 
-      const assistantMessageId = addChatMessageToChat(chatId, "", "assistant");
-      const reader = response.body
-        .pipeThrough(new TextDecoderStream())
-        .getReader();
-      let assistantContent = "";
+      addChatMessageToChat(chatId, result.content, "assistant");
       setMessageContent("");
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        assistantContent += value;
-        updateChatMessageContent(chatId, assistantMessageId, assistantContent);
-      }
     } catch {
       setErrorMessage("Failed to send message. Please try again.");
     } finally {
