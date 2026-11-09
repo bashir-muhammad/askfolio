@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { NextResponse } from "next/server";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -15,8 +16,16 @@ export async function POST(req: Request) {
 
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
-    const { response } = await model.generateContent(body.content);
-    return Response.json({ content: response.text() });
+    const geminiStream = await model.generateContentStream(body.content);
+    const responseStream = new ReadableStream({
+      async start(controller) {
+        for await (const chunk of geminiStream.stream) {
+          controller.enqueue(chunk.text());
+        }
+        controller.close();
+      },
+    });
+    return new NextResponse(responseStream);
   } catch (error) {
     console.error("Gemini request failed:", error);
     return Response.json(

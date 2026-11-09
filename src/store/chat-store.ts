@@ -25,6 +25,7 @@ export type ChatStore = {
     content: string,
     role?: Role,
   ) => void;
+  updateLastBotMessage: (chatId: string, partial: string) => void;
 };
 
 const id = () => Math.random().toString(36).slice(2, 10);
@@ -117,6 +118,21 @@ export const useChatStore = create<ChatStore>((set) => ({
           chat.id === chatId ? appendMessage(chat, newMessage) : chat,
         ),
       };
+    });
+  },
+
+  updateLastBotMessage: (chatId: string, partial: string) => {
+    set((state) => {
+      const chats = state.chats.map((chat) => {
+        if (chat.id !== chatId) return chat;
+        const messages = [...chat.messages];
+        const last = messages[messages.length - 1];
+        if (last && last.role === "assistant") {
+          messages[messages.length - 1] = { ...last, content: partial };
+        }
+        return { ...chat, messages };
+      });
+      return { chats };
     });
   },
 }));

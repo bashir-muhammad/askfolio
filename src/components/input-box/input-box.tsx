@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { SubmitEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send } from "lucide-react";
@@ -11,10 +11,11 @@ const InputBox = () => {
   const [messageContent, setMessageContent] = useState("");
   const addChatMessage = useChatStore((s) => s.addChatMessage);
   const addChatMessageToChat = useChatStore((s) => s.addChatMessageToChat);
+  const updateLastBotMessage = useChatStore((s) => s.updateLastBotMessage);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
 
-  const onSendMessage = async (event: FormEvent<HTMLFormElement>) => {
+  const onSendMessage = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const message = messageContent.trim();
     if (!message || isSending) {
@@ -34,18 +35,25 @@ const InputBox = () => {
         body: JSON.stringify({ content: message }),
       });
 
-      const result: unknown = await response.json();
-      if (
-        !response.ok ||
-        typeof result !== "object" ||
-        result === null ||
-        !("content" in result) ||
-        typeof result.content !== "string"
-      ) {
+      if (!response.ok || !response.body) {
         throw new Error("Chat request failed.");
       }
 
-      addChatMessageToChat(chatId, result.content, "assistant");
+      addChatMessageToChat(chatId, "", "assistant");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        assistantMessage += decoder.decode(value, { stream: true });
+        updateLastBotMessage(chatId, assistantMessage);
+      }
+
+      assistantMessage += decoder.decode();
+      updateLastBotMessage(chatId, assistantMessage);
       setMessageContent("");
     } catch {
       setErrorMessage("Failed to send message. Please try again.");
