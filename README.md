@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AskFolio
 
-## Getting Started
+AskFolio is an AI chat MVP. Users can create and switch between chat threads, send messages, and watch assistant replies stream into the conversation.
 
-First, run the development server:
+## Features
+
+- Create chats and switch between them from the sidebar.
+- Add user messages to the active chat immediately.
+- Receive streamed assistant replies from Google's Gemini API.
+- Keep each reply associated with the chat that started the request.
+
+
+> **Current limitation:** Chats are held in client-side memory only. They are lost when the page is refreshed, and conversations are not yet saved to local storage or a backend. Each API request sends only the latest user message; prior messages in the thread are not sent as conversation context.
+
+## Requirements
+
+- Node.js and npm
+- A Google Gemini API key
+
+## Getting started
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Create `.env.local` in the project root and add your API key:
+
+```bash
+GEMINI_API_KEY=your-gemini-api-key
+```
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Message flow
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. The user submits a message. The client adds it to the active chat and creates a chat if needed.
+2. The input box sends the message content to `POST /api/chat`.
+3. The route requests a streamed response from Gemini and streams text chunks back to the client.
+4. The client creates an assistant message and updates it as each chunk arrives.
+5. The assistant message remains in the chat that initiated the request, even if the user switches chats.
 
-## Learn More
+## Project structure
 
-To learn more about Next.js, take a look at the following resources:
+- `src/app/page.tsx` — main chat layout.
+- `src/app/api/chat/route.ts` — Gemini streaming endpoint.
+- `src/components/` — chat input, message list, sidebar, and shared UI.
+- `src/store/chat-store.ts` — in-memory chat and message state.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run dev    # Start the development server
+npm run lint   # Run ESLint
+npm run build  # Build the production app
+npm run start  # Start the production server
+```
