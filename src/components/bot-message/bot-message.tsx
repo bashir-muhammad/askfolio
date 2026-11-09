@@ -9,7 +9,7 @@ const BotMessage = ({ message }: { message: string }) => {
           <Bot size={16} />
           <span className="hidden">AI Assistant</span>
         </div>
-        <div className="prose dark:prose-invert max-w-full ml-8 p-4 border rounded-lg rounded-tl-none bg-secondary  dark:text-zinc-900">
+        <div className="prose dark:prose-invert max-w-full mx-4 md:mx-8 p-4 border rounded-lg rounded-tl-none bg-secondary  dark:text-zinc-900">
           <ReactMarkdown>{message}</ReactMarkdown>
         </div>
       </div>

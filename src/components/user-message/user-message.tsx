@@ -8,7 +8,7 @@ const UserMessage = ({ message }: { message: string }) => {
           <User size={16} />
           <span className="hidden">Guest User</span>
         </div>
-        <p className="mr-8 py-2 px-4 border rounded-lg rounded-tr-none bg-primary text-white dark:text-zinc-900">{message}</p>
+        <p className="mx-4 md:mx-8 py-2 px-4 border rounded-lg rounded-tr-none bg-primary text-white dark:text-zinc-900">{message}</p>
       </div>
     </div>
   );
