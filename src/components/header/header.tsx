@@ -3,7 +3,7 @@ import Logo from "@/components/logo/logo";
 
 const Header = () => {
   return (
-    <header className="flex items-center justify-between p-4 bg-white dark:bg-black w-full">
+    <header className="flex items-center justify-between p-4 bg-white dark:bg-black w-full shrink-0">
       <Logo />
       <MainNav />
     </header>
