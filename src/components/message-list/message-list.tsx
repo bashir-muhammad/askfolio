@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef } from "react";
 import UserMessage from "@/components/user-message/user-message";
 import BotMessage from "@/components/bot-message/bot-message";
+import { FaceSlightlySmilingPlus } from 'lucide-react';
 
 import { useChatStore, type Message } from "@/store/chat-store";
 
@@ -30,7 +31,8 @@ const MessageList = () => {
     >
       {messages.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-4 p-8">
-          <h2 className="text-lg">No chats yet</h2>
+          <FaceSlightlySmilingPlus size={48} className="text-gray-400" />
+          <h2 className="text-2xl">No chats yet</h2>
           <p className="text-gray-900">
             Start a new chat with input field below
           </p>
