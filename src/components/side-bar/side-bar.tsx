@@ -1,5 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import { Plus } from 'lucide-react';
 import { useChatStore } from "@/store/chat-store";
 
 const SideBar = () => {
@@ -7,7 +8,10 @@ const SideBar = () => {
   return (
     <aside className="border-r p-4 bg-white/50">
       {chats.length > 0 && (
-        <Button onClick={() => createNewChat()}>New Chat</Button>
+        <Button onClick={() => createNewChat()} className="w-full">
+          <Plus data-icon="inline-start" />
+          New Chat
+        </Button>
       )}
       <ul className="mt-4 space-y-2">
         {chats.map((chat) => (
