@@ -10,9 +10,6 @@ export default function Home() {
         <MessageList />
         <div className="shrink-0 px-4 pb-4 pt-3 sm:px-8 lg:px-12">
           <InputBox />
-          <p className="mt-2 text-center text-xs text-muted-foreground">
-            AskFolio can make mistakes. Check important information.
-          </p>
         </div>
       </main>
     </div>
