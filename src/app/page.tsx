@@ -4,11 +4,11 @@ import SideBar from "@/components/side-bar/side-bar";
 
 export default function Home() {
   return (
-    <div className="flex justify-center bg-zinc-50 h-screen">
+    <div className="flex min-h-0 flex-1 flex-col bg-[#faf9ff] lg:flex-row">
       <SideBar />
-      <main className="flex flex-col justify-between px-16 py-4 w-full">
+      <main className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
         <MessageList />
-        <div className="sticky bottom-2 border rounded-2xl bg-white shadow-lg">
+        <div className="shrink-0 px-4 pb-4 pt-3 sm:px-8 lg:px-12">
           <InputBox />
         </div>
       </main>

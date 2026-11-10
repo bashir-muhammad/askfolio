@@ -1,26 +1,10 @@
+import { Sparkles } from "lucide-react";
 
-const MainNav = () => {
-  return (
-    <nav>
-        <ul className="flex space-x-4">
-          <li>
-            <a href="#" className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white">
-              Home
-            </a>
-          </li>
-          <li>
-            <a href="#" className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white">
-              About
-            </a>
-          </li>
-          <li>
-            <a href="#" className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white">
-              Contact
-            </a>
-          </li>
-        </ul>
-      </nav>
-  )
-};
+const MainNav = () => (
+  <div className="flex items-center gap-2 rounded-full border border-[#e9e5f7] bg-[#f7f5ff] px-3 py-1.5 text-xs font-medium text-[#5140bd]">
+    <Sparkles size={14} />
+    <span>AI research workspace</span>
+  </div>
+);
 
 export default MainNav;

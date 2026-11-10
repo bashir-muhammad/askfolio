@@ -3,7 +3,7 @@
 import { SubmitEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { useChatStore } from "@/store/chat-store";
 
@@ -65,9 +65,9 @@ const InputBox = () => {
   return (
     <form
       onSubmit={onSendMessage}
-      className="flex items-center justify-between w-full gap-4 p-4"
+      className="mx-auto flex w-full max-w-5xl items-end gap-3 rounded-2xl border border-[#e9e5f2] bg-white p-3 shadow-[0_8px_30px_rgba(47,37,96,0.07)] sm:p-4"
     >
-      <Field>
+      <Field className="min-w-0">
         <FieldLabel htmlFor="message" className="hidden">
           Message input
         </FieldLabel>
@@ -78,6 +78,7 @@ const InputBox = () => {
           onChange={(event) => setMessageContent(event.target.value)}
           disabled={isSending}
           aria-describedby={errorMessage ? "chat-error" : undefined}
+          className="min-h-11 rounded-xl border-0 bg-transparent px-3 py-2.5 text-sm shadow-none placeholder:text-[#9993a8] focus-visible:ring-0 md:text-sm"
         />
         {errorMessage && (
           <FieldError id="chat-error">{errorMessage}</FieldError>
@@ -88,9 +89,10 @@ const InputBox = () => {
         type="submit"
         size="icon-lg"
         disabled={isSending}
+        aria-label="Send message"
+        className="size-11 rounded-xl bg-[#4932c4] text-white shadow-sm shadow-[#4932c4]/20 hover:bg-[#3924ad]"
       >
-        <Send />
-        <span className="sr-only">Send</span>
+        <ArrowUp />
       </Button>
     </form>
   );
