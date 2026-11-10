@@ -22,7 +22,12 @@ export const metadata: Metadata = {
   description: "AskFolio helps you think through your next big idea.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export interface LayoutProps {
+  children: React.ReactNode;
+  params: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default function RootLayout({ children }: LayoutProps) {
   return (
     <html
       lang="en"
