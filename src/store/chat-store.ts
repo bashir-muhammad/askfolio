@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export type Role = "user" | "assistant";
 export interface Message {
@@ -46,93 +47,100 @@ const appendMessage = (chat: Chat, message: Message): Chat => ({
   updatedAt: new Date().toISOString(),
 });
 
-export const useChatStore = create<ChatStore>((set) => ({
-  chats: [],
-  activeChatId: null,
+export const useChatStore = create<ChatStore>()(
+  persist(
+    (set) => ({
+      chats: [],
+      activeChatId: null,
 
-  createNewChat: () => {
-    const newChat: Chat = {
-      id: id(),
-      title: "New Chat",
-      messages: [],
-    };
-    set((state) => ({
-      chats: [newChat, ...state.chats],
-      activeChatId: newChat.id,
-    }));
-  },
-  setActiveChat: (chatId: string) => {
-    set((state) =>
-      state.chats.some((chat) => chat.id === chatId)
-        ? { activeChatId: chatId }
-        : state,
-    );
-  },
-  addChatMessage: (content: string, role: Role = "user") => {
-    const newMessage = createMessage(content, role);
-    let targetChatId = "";
-
-    set((state) => {
-      const activeChat = state.chats.find(
-        (chat) => chat.id === state.activeChatId,
-      );
-      if (!activeChat) {
+      createNewChat: () => {
         const newChat: Chat = {
           id: id(),
-          title: content.substring(0, 20) || "New Chat",
-          messages: [newMessage],
-          updatedAt: new Date().toISOString(),
+          title: "New Chat",
+          messages: [],
         };
-        targetChatId = newChat.id;
-
-        return {
+        set((state) => ({
           chats: [newChat, ...state.chats],
           activeChatId: newChat.id,
-        };
-      }
+        }));
+      },
+      setActiveChat: (chatId: string) => {
+        set((state) =>
+          state.chats.some((chat) => chat.id === chatId)
+            ? { activeChatId: chatId }
+            : state,
+        );
+      },
+      addChatMessage: (content: string, role: Role = "user") => {
+        const newMessage = createMessage(content, role);
+        let targetChatId = "";
 
-      targetChatId = activeChat.id;
-      return {
-        chats: state.chats.map((chat) => {
-          return chat.id === activeChat.id
-            ? appendMessage(chat, newMessage)
-            : chat;
-        }),
-      };
-    });
-    return targetChatId;
-  },
+        set((state) => {
+          const activeChat = state.chats.find(
+            (chat) => chat.id === state.activeChatId,
+          );
+          if (!activeChat) {
+            const newChat: Chat = {
+              id: id(),
+              title: content.substring(0, 20) || "New Chat",
+              messages: [newMessage],
+              updatedAt: new Date().toISOString(),
+            };
+            targetChatId = newChat.id;
 
-  addChatMessageToChat: (
-    chatId: string,
-    content: string,
-    role: Role = "user",
-  ) => {
-    const newMessage = createMessage(content, role);
+            return {
+              chats: [newChat, ...state.chats],
+              activeChatId: newChat.id,
+            };
+          }
 
-    set((state) => {
-      if (!state.chats.some((chat) => chat.id === chatId)) return state;
+          targetChatId = activeChat.id;
+          return {
+            chats: state.chats.map((chat) =>
+              chat.id === activeChat.id ? appendMessage(chat, newMessage) : chat,
+            ),
+          };
+        });
+        return targetChatId;
+      },
 
-      return {
-        chats: state.chats.map((chat) =>
-          chat.id === chatId ? appendMessage(chat, newMessage) : chat,
-        ),
-      };
-    });
-  },
+      addChatMessageToChat: (
+        chatId: string,
+        content: string,
+        role: Role = "user",
+      ) => {
+        const newMessage = createMessage(content, role);
 
-  updateLastBotMessage: (chatId: string, partial: string) => {
-    set((state) => {
-      const chats = state.chats.map((chat) => {
-        if (chat.id !== chatId) return chat;
-        const messages = [...chat.messages];
-        const last = messages[messages.length - 1];
-        if (last && last.role === "assistant") {
-          messages[messages.length - 1] = { ...last, content: partial };
-        }
-        return { ...chat, messages };
-      });
-      return { chats };
-    });
-  },
-}));
+        set((state) => {
+          if (!state.chats.some((chat) => chat.id === chatId)) return state;
+
+          return {
+            chats: state.chats.map((chat) =>
+              chat.id === chatId ? appendMessage(chat, newMessage) : chat,
+            ),
+          };
+        });
+      },
+
+      updateLastBotMessage: (chatId: string, partial: string) => {
+        set((state) => {
+          const chats = state.chats.map((chat) => {
+            if (chat.id !== chatId) return chat;
+            const messages = [...chat.messages];
+            const last = messages[messages.length - 1];
+            if (last && last.role === "assistant") {
+              messages[messages.length - 1] = { ...last, content: partial };
+            }
+            return { ...chat, messages };
+          });
+          return { chats };
+        });
+      },
+    }),
+    {
+      name: "askfolio-chat-store",
+      skipHydration: true,
+      storage: createJSONStorage(() => sessionStorage),
+    },
+  ),
+);

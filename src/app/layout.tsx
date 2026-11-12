@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import Header from "@/components/header/header";
 import Footer from "@/components/footer/footer";
+import ChatStoreHydration from "@/lib/chat-store-hydration";
 
 const roboto = Roboto({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: LayoutProps) {
       )}
     >
       <body className="flex min-h-dvh w-full flex-col">
+        <ChatStoreHydration />
         <Header />
         {children}
         <Footer />
