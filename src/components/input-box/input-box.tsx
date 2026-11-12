@@ -5,20 +5,34 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowUp } from "lucide-react";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { useChatStore } from "@/store/chat-store";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { GUEST_CHAT_LIMIT, useChatStore } from "@/store/chat-store";
 
 const InputBox = () => {
+  const { status } = useSession();
+  const router = useRouter();
   const [messageContent, setMessageContent] = useState("");
   const addChatMessage = useChatStore((s) => s.addChatMessage);
   const addChatMessageToChat = useChatStore((s) => s.addChatMessageToChat);
+  const beginGuestChat = useChatStore((s) => s.beginGuestChat);
+  const endGuestChat = useChatStore((s) => s.endGuestChat);
+  const guestChatsUsed = useChatStore((s) => s.guestChatsUsed);
   const updateLastBotMessage = useChatStore((s) => s.updateLastBotMessage);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const guestLimitReached =
+    status === "unauthenticated" && guestChatsUsed >= GUEST_CHAT_LIMIT;
 
   const onSendMessage = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const message = messageContent.trim();
     if (!message || isSending) {
+      return;
+    }
+
+    const isGuest = status === "unauthenticated";
+    if (isGuest && !beginGuestChat()) {
       return;
     }
 
@@ -59,8 +73,28 @@ const InputBox = () => {
       setErrorMessage("Failed to send message. Please try again.");
     } finally {
       setIsSending(false);
+      if (isGuest) {
+        endGuestChat();
+      }
     }
   };
+
+  if (guestLimitReached && !isSending) {
+    return (
+      <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-3 rounded-2xl border border-[#e9e5f2] bg-white p-4 text-center shadow-[0_8px_30px_rgba(47,37,96,0.07)] sm:flex-row sm:px-6 sm:text-left">
+        <p className="text-sm text-[#625d70]">
+          You&apos;ve used your 3 free chats. Sign in to continue chatting.
+        </p>
+        <Button
+          type="button"
+          onClick={() => router.push("/login")}
+          className="rounded-xl bg-[#4932c4] text-white hover:bg-[#3924ad]"
+        >
+          Sign in to continue
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <form

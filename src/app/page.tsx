@@ -1,21 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
 import InputBox from "@/components/input-box/input-box";
 import MessageList from "@/components/message-list/message-list";
 import SideBar from "@/components/side-bar/side-bar";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 
 export default function Home() {
   const { status } = useSession();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/login");
-    }
-  }, [status, router]);
 
   if (status === "loading") {
     return (
@@ -23,10 +14,6 @@ export default function Home() {
         Loading your workspace...
       </div>
     );
-  }
-
-  if (status === "unauthenticated") {
-    return null;
   }
 
   return (
