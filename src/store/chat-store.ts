@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export type Role = "user" | "assistant";
 export interface Message {
@@ -140,6 +140,7 @@ export const useChatStore = create<ChatStore>()(
     {
       name: "askfolio-chat-store",
       skipHydration: true,
+      storage: createJSONStorage(() => sessionStorage),
     },
   ),
 );
