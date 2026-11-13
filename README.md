@@ -29,7 +29,12 @@ Create `.env.local` in the project root and add your API key:
 
 ```bash
 GEMINI_API_KEY=your-gemini-api-key
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
+NEXTAUTH_SECRET=your-nextauth-secret
 ```
+
+The OAuth credentials and `NEXTAUTH_SECRET` are required when running the app. CI uses build-only placeholders so pull request builds do not need access to production secrets; configure real values in the deployment environment.
 
 Start the development server:
 

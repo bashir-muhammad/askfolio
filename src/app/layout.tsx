@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import Header from "@/components/header/header";
 import Footer from "@/components/footer/footer";
 import ChatStoreHydration from "@/lib/chat-store-hydration";
+import AuthProvider from "@/components/auth-provider/auth-provider";
 
 const roboto = Roboto({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -43,9 +44,11 @@ export default function RootLayout({ children }: LayoutProps) {
     >
       <body className="flex min-h-dvh w-full flex-col">
         <ChatStoreHydration />
-        <Header />
-        {children}
-        <Footer />
+        <AuthProvider>
+          <Header />
+          {children}
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

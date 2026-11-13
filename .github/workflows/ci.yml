@@ -35,4 +35,9 @@ jobs:
     - run: pnpm install --frozen-lockfile
     - run: pnpm lint
     - run: pnpm typecheck
-    - run: pnpm run build
+    - name: Build
+      run: pnpm run build
+      env:
+        GOOGLE_CLIENT_ID: ci-build-placeholder
+        GOOGLE_CLIENT_SECRET: ci-build-placeholder
+        NEXTAUTH_SECRET: ci-build-placeholder

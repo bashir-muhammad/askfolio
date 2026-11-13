@@ -15,11 +15,17 @@ export interface Chat {
   updatedAt?: string;
 }
 
+export const GUEST_CHAT_LIMIT = 3;
+
 export type ChatStore = {
   chats: Chat[];
   activeChatId: string | null;
+  guestChatsUsed: number;
+  guestChatInProgress: boolean;
   createNewChat: () => void;
   setActiveChat: (chatId: string) => void;
+  beginGuestChat: () => boolean;
+  endGuestChat: () => void;
   addChatMessage: (content: string, role?: Role) => string;
   addChatMessageToChat: (
     chatId: string,
@@ -52,6 +58,8 @@ export const useChatStore = create<ChatStore>()(
     (set) => ({
       chats: [],
       activeChatId: null,
+      guestChatsUsed: 0,
+      guestChatInProgress: false,
 
       createNewChat: () => {
         const newChat: Chat = {
@@ -71,6 +79,25 @@ export const useChatStore = create<ChatStore>()(
             : state,
         );
       },
+      beginGuestChat: () => {
+        let started = false;
+        set((state) => {
+          if (
+            state.guestChatsUsed >= GUEST_CHAT_LIMIT ||
+            state.guestChatInProgress
+          ) {
+            return state;
+          }
+
+          started = true;
+          return {
+            guestChatsUsed: state.guestChatsUsed + 1,
+            guestChatInProgress: true,
+          };
+        });
+        return started;
+      },
+      endGuestChat: () => set({ guestChatInProgress: false }),
       addChatMessage: (content: string, role: Role = "user") => {
         const newMessage = createMessage(content, role);
         let targetChatId = "";
@@ -141,6 +168,11 @@ export const useChatStore = create<ChatStore>()(
       name: "askfolio-chat-store",
       skipHydration: true,
       storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({
+        chats: state.chats,
+        activeChatId: state.activeChatId,
+        guestChatsUsed: state.guestChatsUsed,
+      }),
     },
   ),
 );
