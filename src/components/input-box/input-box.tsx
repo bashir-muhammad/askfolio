@@ -21,6 +21,7 @@ const InputBox = () => {
   const updateLastBotMessage = useChatStore((s) => s.updateLastBotMessage);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const remainingGuestChats = Math.max(GUEST_CHAT_LIMIT - guestChatsUsed, 0);
   const guestLimitReached =
     status === "unauthenticated" && guestChatsUsed >= GUEST_CHAT_LIMIT;
 
@@ -83,7 +84,7 @@ const InputBox = () => {
     return (
       <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-3 rounded-2xl border border-[#e9e5f2] bg-white p-4 text-center shadow-[0_8px_30px_rgba(47,37,96,0.07)] sm:flex-row sm:px-6 sm:text-left">
         <p className="text-sm text-[#625d70]">
-          You&apos;ve used your 3 free chats. Sign in to continue chatting.
+          You&apos;ve used your {GUEST_CHAT_LIMIT} free chats. Sign in to continue chatting.
         </p>
         <Button
           type="button"
@@ -97,38 +98,52 @@ const InputBox = () => {
   }
 
   return (
-    <form
-      onSubmit={onSendMessage}
-      className="mx-auto flex w-full max-w-5xl items-end gap-3 rounded-2xl border border-[#e9e5f2] bg-white p-3 shadow-[0_8px_30px_rgba(47,37,96,0.07)] sm:p-4"
-    >
-      <Field className="min-w-0">
-        <FieldLabel htmlFor="message" className="hidden">
-          Message input
-        </FieldLabel>
-        <Textarea
-          id="message"
-          placeholder="Type your message here..."
-          value={messageContent}
-          onChange={(event) => setMessageContent(event.target.value)}
-          disabled={isSending}
-          aria-describedby={errorMessage ? "chat-error" : undefined}
-          className="min-h-11 rounded-xl border-0 bg-transparent px-3 py-2.5 text-sm shadow-none placeholder:text-[#9993a8] focus-visible:ring-0 md:text-sm"
-        />
-        {errorMessage && (
-          <FieldError id="chat-error">{errorMessage}</FieldError>
-        )}
-      </Field>
-      <Button
-        variant="default"
-        type="submit"
-        size="icon-lg"
-        disabled={isSending}
-        aria-label="Send message"
-        className="size-11 rounded-xl bg-[#4932c4] text-white shadow-sm shadow-[#4932c4]/20 hover:bg-[#3924ad]"
+    <>
+      {status === "unauthenticated" && (
+        <div className="mb-2 flex w-full items-center justify-center">
+          <div className="flex items-center gap-2 border px-2 rounded-full bg-white">
+            <p className="pl-3 text-sm text-[#625d70]">
+              {remainingGuestChats} of {GUEST_CHAT_LIMIT} free queries remaining
+            </p>
+            <Button variant="link" onClick={() => router.push("/login")}>
+              Sign in
+            </Button>
+          </div>
+        </div>
+      )}
+      <form
+        onSubmit={onSendMessage}
+        className="mx-auto flex w-full max-w-5xl items-end gap-3 rounded-2xl border border-[#e9e5f2] bg-white p-3 shadow-[0_8px_30px_rgba(47,37,96,0.07)] sm:p-4"
       >
-        <ArrowUp />
-      </Button>
-    </form>
+        <Field className="min-w-0">
+          <FieldLabel htmlFor="message" className="hidden">
+            Message input
+          </FieldLabel>
+          <Textarea
+            id="message"
+            placeholder="Type your message here..."
+            value={messageContent}
+            onChange={(event) => setMessageContent(event.target.value)}
+            disabled={isSending}
+            aria-describedby={errorMessage ? "chat-error" : undefined}
+            className="min-h-11 rounded-xl border-0 bg-transparent px-3 py-2.5 text-sm shadow-none placeholder:text-[#9993a8] focus-visible:ring-0 md:text-sm"
+          />
+          {errorMessage && (
+            <FieldError id="chat-error">{errorMessage}</FieldError>
+          )}
+        </Field>
+        <Button
+          variant="default"
+          type="submit"
+          size="icon-lg"
+          disabled={isSending}
+          aria-label="Send message"
+          className="size-11 rounded-xl bg-[#4932c4] text-white shadow-sm shadow-[#4932c4]/20 hover:bg-[#3924ad]"
+        >
+          <ArrowUp />
+        </Button>
+      </form>
+    </>
   );
 };
 
