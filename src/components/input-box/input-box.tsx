@@ -8,6 +8,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { GUEST_CHAT_LIMIT, useChatStore } from "@/store/chat-store";
+import { buildChatRequestInit } from "@/lib/chat-request";
 
 const InputBox = () => {
   const { status } = useSession();
@@ -41,32 +42,22 @@ const InputBox = () => {
     const activeChat = storeState.chats.find(
       (chat) => chat.id === storeState.activeChatId,
     );
-    const history = isGuest
-      ? (activeChat?.messages ?? []).flatMap((chatMessage) =>
-          chatMessage.role === "user" || chatMessage.role === "assistant"
-            ? [{ role: chatMessage.role, content: chatMessage.content }]
-            : [],
-        )
-      : undefined;
     const chatId = addChatMessage(message);
     setErrorMessage("");
     setIsSending(true);
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-guest-chat-count": String(isGuest ? guestChatsUsed : 0),
-        },
-        body: JSON.stringify({
+      const response = await fetch(
+        "/api/chat",
+        buildChatRequestInit({
           content: message,
           chatId,
           title: activeChat?.title,
-          history,
-          guestChatCount: isGuest ? guestChatsUsed : 0,
+          messages: activeChat?.messages ?? [],
+          isGuest,
+          guestChatsUsed,
         }),
-      });
+      );
 
       if (!response.ok || !response.body) {
         const errorPayload = await response.json().catch(() => null);
