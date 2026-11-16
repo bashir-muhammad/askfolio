@@ -5,107 +5,17 @@ import { authOptions } from "@/lib/auth-config";
 import {
   getChatForUser,
   upsertChatMessage,
-  type StoredMessage,
 } from "@/lib/chat-persistence";
+import {
+  parseGuestHistory,
+  toGeminiHistory,
+} from "@/lib/conversation-history";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 20;
 const GUEST_CHAT_LIMIT = 3;
-const MAX_HISTORY_CHARACTERS = 20_000;
 const RATE_LIMIT_STORE = new Map<string, { count: number; resetAt: number }>();
-
-function getConversationHistory(messages: StoredMessage[]) {
-  const turns: Array<{ user: string; assistant: string }> = [];
-  let pendingUserMessage: string | null = null;
-
-  for (const message of messages) {
-    if (!message.content.trim()) {
-      continue;
-    }
-
-    if (message.role === "user") {
-      pendingUserMessage = message.content;
-    } else if (pendingUserMessage !== null) {
-      turns.push({ user: pendingUserMessage, assistant: message.content });
-      pendingUserMessage = null;
-    }
-  }
-
-  const selectedTurns: Array<{ user: string; assistant: string }> = [];
-  let remainingCharacters = MAX_HISTORY_CHARACTERS;
-
-  for (let index = turns.length - 1; index >= 0; index -= 1) {
-    const turn = turns[index];
-    const turnLength = turn.user.length + turn.assistant.length;
-
-    if (turnLength <= remainingCharacters) {
-      selectedTurns.unshift(turn);
-      remainingCharacters -= turnLength;
-      continue;
-    }
-
-    if (remainingCharacters >= 2) {
-      const userLength = Math.min(
-        turn.user.length,
-        Math.floor(remainingCharacters / 2),
-      );
-      const assistantLength = Math.min(
-        turn.assistant.length,
-        remainingCharacters - userLength,
-      );
-      selectedTurns.unshift({
-        user: userLength > 0 ? turn.user.slice(-userLength) : "",
-        assistant:
-          assistantLength > 0 ? turn.assistant.slice(-assistantLength) : "",
-      });
-    }
-    break;
-  }
-
-  const history: { role: "user" | "model"; parts: { text: string }[] }[] = [];
-  for (const turn of selectedTurns) {
-    history.push(
-      { role: "user", parts: [{ text: turn.user }] },
-      { role: "model", parts: [{ text: turn.assistant }] },
-    );
-  }
-
-  return history;
-}
-
-function getGuestHistory(body: Record<string, unknown>): StoredMessage[] | null {
-  const history = body.history;
-  if (history === undefined) {
-    return [];
-  }
-  if (!Array.isArray(history)) {
-    return null;
-  }
-
-  const messages: StoredMessage[] = [];
-  for (const item of history) {
-    if (
-      typeof item !== "object" ||
-      item === null ||
-      !("role" in item) ||
-      (item.role !== "user" && item.role !== "assistant") ||
-      !("content" in item) ||
-      typeof item.content !== "string" ||
-      item.content.length > 4000
-    ) {
-      return null;
-    }
-
-    messages.push({
-      id: "",
-      role: item.role,
-      content: item.content,
-    });
-  }
-
-  return messages;
-}
 
 function getRateLimitKey(req: Request, sessionUserEmail?: string | null) {
   const forwardedFor = req.headers.get("x-forwarded-for");
@@ -210,14 +120,17 @@ export async function POST(req: Request) {
       ? body.title
       : undefined;
 
-  let conversationHistory: StoredMessage[] = [];
+  let conversationHistory: { role: "user" | "assistant"; content: string }[] =
+    [];
   if (session?.user?.email) {
     if (chatId) {
       const chat = await getChatForUser(session.user.email, chatId);
       conversationHistory = chat?.messages ?? [];
     }
   } else {
-    const guestHistory = getGuestHistory(body);
+    const guestHistory = parseGuestHistory(
+      "history" in body ? body.history : undefined,
+    );
     if (!guestHistory) {
       return Response.json({ error: "Conversation history is invalid." }, { status: 400 });
     }
@@ -236,7 +149,7 @@ export async function POST(req: Request) {
 
     const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
     const chat = model.startChat({
-      history: getConversationHistory(conversationHistory),
+      history: toGeminiHistory(conversationHistory),
     });
     const geminiStream = await chat.sendMessageStream(content);
     const responseChunks: string[] = [];
