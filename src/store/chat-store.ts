@@ -4,7 +4,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 export type Role = "user" | "assistant";
 export interface Message {
   id: string;
-  role?: Role;
+  role: Role;
   content: string;
 }
 
@@ -26,14 +26,26 @@ export type ChatStore = {
   setActiveChat: (chatId: string) => void;
   hydrateServerChats: (serverChats: Chat[]) => void;
   beginGuestChat: () => boolean;
-  endGuestChat: () => void;
-  addChatMessage: (content: string, role?: Role) => string;
+  endGuestChat: (completed: boolean) => void;
+  addChatMessage: (
+    content: string,
+    role?: Role,
+  ) => { chatId: string; messageId: string };
   addChatMessageToChat: (
     chatId: string,
     content: string,
     role?: Role,
+  ) => string | null;
+  removeChatMessages: (
+    chatId: string,
+    messageIds: string[],
+    originalTitle: string,
   ) => void;
-  updateLastBotMessage: (chatId: string, partial: string) => void;
+  updateChatMessage: (
+    chatId: string,
+    messageId: string,
+    content: string,
+  ) => void;
 };
 
 const id = () => Math.random().toString(36).slice(2, 10);
@@ -104,7 +116,16 @@ export const useChatStore = create<ChatStore>()(
         });
         return started;
       },
-      endGuestChat: () => set({ guestChatInProgress: false }),
+      endGuestChat: (completed: boolean) =>
+        set((state) => {
+          if (!state.guestChatInProgress) return state;
+          return {
+            guestChatInProgress: false,
+            guestChatsUsed: completed
+              ? state.guestChatsUsed
+              : Math.max(state.guestChatsUsed - 1, 0),
+          };
+        }),
       addChatMessage: (content: string, role: Role = "user") => {
         const newMessage = createMessage(content, role);
         let targetChatId = "";
@@ -135,7 +156,7 @@ export const useChatStore = create<ChatStore>()(
             ),
           };
         });
-        return targetChatId;
+        return { chatId: targetChatId, messageId: newMessage.id };
       },
 
       addChatMessageToChat: (
@@ -144,27 +165,48 @@ export const useChatStore = create<ChatStore>()(
         role: Role = "user",
       ) => {
         const newMessage = createMessage(content, role);
+        let added = false;
 
         set((state) => {
           if (!state.chats.some((chat) => chat.id === chatId)) return state;
 
+          added = true;
           return {
             chats: state.chats.map((chat) =>
               chat.id === chatId ? appendMessage(chat, newMessage) : chat,
             ),
           };
         });
+        return added ? newMessage.id : null;
       },
 
-      updateLastBotMessage: (chatId: string, partial: string) => {
+      removeChatMessages: (
+        chatId: string,
+        messageIds: string[],
+        originalTitle: string,
+      ) => {
+        set((state) => ({
+          chats: state.chats.map((chat) => {
+            if (chat.id !== chatId) return chat;
+            const messages = chat.messages.filter(
+              (message) => !messageIds.includes(message.id),
+            );
+            return {
+              ...chat,
+              messages,
+              title: messages.length === 0 ? originalTitle : chat.title,
+            };
+          }),
+        }));
+      },
+
+      updateChatMessage: (chatId: string, messageId: string, content: string) => {
         set((state) => {
           const chats = state.chats.map((chat) => {
             if (chat.id !== chatId) return chat;
-            const messages = [...chat.messages];
-            const last = messages[messages.length - 1];
-            if (last && last.role === "assistant") {
-              messages[messages.length - 1] = { ...last, content: partial };
-            }
+            const messages = chat.messages.map((message) =>
+              message.id === messageId ? { ...message, content } : message,
+            );
             return { ...chat, messages };
           });
           return { chats };

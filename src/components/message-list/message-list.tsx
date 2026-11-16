@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef } from "react";
+import { useSession } from "next-auth/react";
 import UserMessage from "@/components/user-message/user-message";
 import BotMessage from "@/components/bot-message/bot-message";
 import { FileText, Sparkles } from "lucide-react";
@@ -11,6 +12,7 @@ const EMPTY_MESSAGES: Message[] = [];
 
 const MessageList = () => {
   const { chats, activeChatId } = useChatStore();
+  const { data: session } = useSession();
   const activeChat = chats.find((chat) => chat.id === activeChatId);
   const messages = activeChat?.messages ?? EMPTY_MESSAGES;
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -64,7 +66,12 @@ const MessageList = () => {
         )}
         {messages.map((message) =>
           message.role === "user" ? (
-            <UserMessage key={message.id} message={message.content} />
+            <UserMessage
+              key={message.id}
+              message={message.content}
+              userName={session?.user?.name}
+              userImage={session?.user?.image}
+            />
           ) : (
             <BotMessage key={message.id} message={message.content} />
           ),
