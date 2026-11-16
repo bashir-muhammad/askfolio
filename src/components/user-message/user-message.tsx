@@ -1,20 +1,23 @@
 import { User } from "lucide-react";
-import { useSession } from "next-auth/react";
 import Image from "next/image";
 
-const UserMessage = ({ message }: { message: string }) => {
-  const { data: session } = useSession();
+interface UserMessageProps {
+  message: string;
+  userName?: string | null;
+  userImage?: string | null;
+}
 
+const UserMessage = ({ message, userName, userImage }: UserMessageProps) => {
   return (
     <div className="mx-auto flex w-full max-w-5xl justify-end">
       <div className="flex max-w-[88%] flex-col items-end sm:max-w-[78%]">
         <div className="mb-2 flex items-center gap-2 text-xs font-medium text-[#777184]">
-          <span>{session?.user?.name || "Guest user"}</span>
+          <span>{userName || "Guest user"}</span>
           <span className="flex size-6 items-center justify-center overflow-hidden rounded-full bg-[#e8e4f5] text-[#6555c7]">
-            {session?.user?.image ? (
+            {userImage ? (
               <Image
-                src={session.user.image}
-                alt={session.user.name ? `${session.user.name}'s avatar` : "User avatar"}
+                src={userImage}
+                alt={userName ? `${userName}'s avatar` : "User avatar"}
                 className="size-full object-cover"
                 width={24}
                 height={24}

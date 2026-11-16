@@ -4,7 +4,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 export type Role = "user" | "assistant";
 export interface Message {
   id: string;
-  role?: Role;
+  role: Role;
   content: string;
 }
 

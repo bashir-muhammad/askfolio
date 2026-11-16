@@ -9,7 +9,7 @@ const BotMessage = ({ message }: { message: string }) => {
       </div>
       <div className="min-w-0 flex-1">
         <div className="mb-2 flex items-center gap-2">
-          <span className="text-sm font-semibold text-[#302b40]">AskFolio AI</span>
+          <p className="text-sm font-semibold text-[#302b40]">AskFolio AI</p>
           <span className="rounded-full bg-[#eeebff] px-2 py-0.5 text-[10px] font-semibold text-[#5140bd]">
             Assistant
           </span>
