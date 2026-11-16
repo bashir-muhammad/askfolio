@@ -19,10 +19,6 @@ const InputBox = () => {
   const endGuestChat = useChatStore((s) => s.endGuestChat);
   const guestChatsUsed = useChatStore((s) => s.guestChatsUsed);
   const updateLastBotMessage = useChatStore((s) => s.updateLastBotMessage);
-  const activeChatTitle = useChatStore((s) => {
-    const activeChat = s.chats.find((chat) => chat.id === s.activeChatId);
-    return activeChat?.title ?? "New Chat";
-  });
   const [errorMessage, setErrorMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const remainingGuestChats = Math.max(GUEST_CHAT_LIMIT - guestChatsUsed, 0);
@@ -41,6 +37,17 @@ const InputBox = () => {
       return;
     }
 
+    const storeState = useChatStore.getState();
+    const activeChat = storeState.chats.find(
+      (chat) => chat.id === storeState.activeChatId,
+    );
+    const history = isGuest
+      ? (activeChat?.messages ?? []).flatMap((chatMessage) =>
+          chatMessage.role === "user" || chatMessage.role === "assistant"
+            ? [{ role: chatMessage.role, content: chatMessage.content }]
+            : [],
+        )
+      : undefined;
     const chatId = addChatMessage(message);
     setErrorMessage("");
     setIsSending(true);
@@ -55,7 +62,8 @@ const InputBox = () => {
         body: JSON.stringify({
           content: message,
           chatId,
-          title: activeChatTitle,
+          title: activeChat?.title,
+          history,
           guestChatCount: isGuest ? guestChatsUsed : 0,
         }),
       });

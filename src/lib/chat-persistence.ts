@@ -58,6 +58,14 @@ export async function getChatsForUser(email: string): Promise<StoredChat[]> {
   });
 }
 
+export async function getChatForUser(
+  email: string,
+  chatId: string,
+): Promise<StoredChat | null> {
+  const store = await readStore();
+  return store[email]?.find((chat) => chat.id === chatId) ?? null;
+}
+
 export async function createChatForUser(
   email: string,
   input: { id?: string; title?: string; message?: StoredMessage },

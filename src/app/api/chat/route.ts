@@ -2,13 +2,76 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth-config";
-import { upsertChatMessage } from "@/lib/chat-persistence";
+import {
+  getChatForUser,
+  upsertChatMessage,
+  type StoredMessage,
+} from "@/lib/chat-persistence";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 20;
 const GUEST_CHAT_LIMIT = 3;
 const RATE_LIMIT_STORE = new Map<string, { count: number; resetAt: number }>();
+
+function getConversationHistory(messages: StoredMessage[]) {
+  const history: { role: "user" | "model"; parts: { text: string }[] }[] = [];
+  let pendingUserMessage: string | null = null;
+
+  for (const message of messages) {
+    if (!message.content.trim()) {
+      continue;
+    }
+
+    if (message.role === "user") {
+      pendingUserMessage = message.content;
+      continue;
+    }
+
+    if (pendingUserMessage !== null) {
+      history.push(
+        { role: "user", parts: [{ text: pendingUserMessage }] },
+        { role: "model", parts: [{ text: message.content }] },
+      );
+      pendingUserMessage = null;
+    }
+  }
+
+  return history;
+}
+
+function getGuestHistory(body: Record<string, unknown>): StoredMessage[] | null {
+  const history = body.history;
+  if (history === undefined) {
+    return [];
+  }
+  if (!Array.isArray(history)) {
+    return null;
+  }
+
+  const messages: StoredMessage[] = [];
+  for (const item of history) {
+    if (
+      typeof item !== "object" ||
+      item === null ||
+      !("role" in item) ||
+      (item.role !== "user" && item.role !== "assistant") ||
+      !("content" in item) ||
+      typeof item.content !== "string" ||
+      item.content.length > 4000
+    ) {
+      return null;
+    }
+
+    messages.push({
+      id: "",
+      role: item.role,
+      content: item.content,
+    });
+  }
+
+  return messages;
+}
 
 function getRateLimitKey(req: Request, sessionUserEmail?: string | null) {
   const forwardedFor = req.headers.get("x-forwarded-for");
@@ -113,6 +176,20 @@ export async function POST(req: Request) {
       ? body.title
       : undefined;
 
+  let conversationHistory: StoredMessage[] = [];
+  if (session?.user?.email) {
+    if (chatId) {
+      const chat = await getChatForUser(session.user.email, chatId);
+      conversationHistory = chat?.messages ?? [];
+    }
+  } else {
+    const guestHistory = getGuestHistory(body);
+    if (!guestHistory) {
+      return Response.json({ error: "Conversation history is invalid." }, { status: 400 });
+    }
+    conversationHistory = guestHistory;
+  }
+
   try {
     if (session?.user?.email) {
       await upsertChatMessage(session.user.email, {
@@ -124,7 +201,10 @@ export async function POST(req: Request) {
     }
 
     const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
-    const geminiStream = await model.generateContentStream(content);
+    const chat = model.startChat({
+      history: getConversationHistory(conversationHistory),
+    });
+    const geminiStream = await chat.sendMessageStream(content);
     const responseChunks: string[] = [];
 
     const responseStream = new ReadableStream({
