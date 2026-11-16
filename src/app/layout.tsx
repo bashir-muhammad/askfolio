@@ -43,8 +43,8 @@ export default function RootLayout({ children }: LayoutProps) {
       )}
     >
       <body className="flex min-h-dvh w-full flex-col">
-        <ChatStoreHydration />
         <AuthProvider>
+          <ChatStoreHydration />
           <Header />
           {children}
           <Footer />

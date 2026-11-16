@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth-config";
+import { upsertChatMessage } from "@/lib/chat-persistence";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -84,7 +85,11 @@ export async function POST(req: Request) {
   const guestUsageCount = getGuestUsageCount(body, req);
 
   if (!isAuthenticated) {
-    if (!Number.isFinite(guestUsageCount) || guestUsageCount < 0 || guestUsageCount >= GUEST_CHAT_LIMIT) {
+    if (
+      !Number.isFinite(guestUsageCount) ||
+      guestUsageCount < 0 ||
+      guestUsageCount >= GUEST_CHAT_LIMIT
+    ) {
       return Response.json(
         { error: "You have used all 3 free chats. Please sign in to continue." },
         { status: 403 },
@@ -99,21 +104,54 @@ export async function POST(req: Request) {
     );
   }
 
+  const chatId =
+    typeof body === "object" && body !== null && "chatId" in body && typeof body.chatId === "string"
+      ? body.chatId
+      : undefined;
+  const title =
+    typeof body === "object" && body !== null && "title" in body && typeof body.title === "string"
+      ? body.title
+      : undefined;
+
   try {
+    if (session?.user?.email) {
+      await upsertChatMessage(session.user.email, {
+        chatId,
+        title,
+        role: "user",
+        content,
+      });
+    }
+
     const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
     const geminiStream = await model.generateContentStream(content);
+    const responseChunks: string[] = [];
+
     const responseStream = new ReadableStream({
       async start(controller) {
         try {
           for await (const chunk of geminiStream.stream) {
-            controller.enqueue(chunk.text());
+            const text = chunk.text();
+            responseChunks.push(text);
+            controller.enqueue(text);
           }
+
+          if (session?.user?.email) {
+            await upsertChatMessage(session.user.email, {
+              chatId,
+              title,
+              role: "assistant",
+              content: responseChunks.join(""),
+            });
+          }
+
           controller.close();
         } catch (error) {
           controller.error(error);
         }
       },
     });
+
     return new NextResponse(responseStream);
   } catch (error) {
     console.error("Gemini request failed:", error);
