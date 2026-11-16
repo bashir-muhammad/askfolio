@@ -1,4 +1,5 @@
 import type { Message } from "@/store/chat-store";
+import type { ConversationMessage } from "@/lib/conversation-history";
 
 interface BuildChatRequestInput {
   content: string;
@@ -7,6 +8,14 @@ interface BuildChatRequestInput {
   messages: Message[];
   isGuest: boolean;
   guestChatsUsed: number;
+}
+
+function getGuestHistory(messages: Message[]): ConversationMessage[] {
+  return messages.flatMap((message) =>
+    message.role === "user" || message.role === "assistant"
+      ? [{ role: message.role, content: message.content }]
+      : [],
+  );
 }
 
 export function buildChatRequestInit({
@@ -18,11 +27,7 @@ export function buildChatRequestInit({
   guestChatsUsed,
 }: BuildChatRequestInput): RequestInit {
   const history = isGuest
-    ? messages.flatMap((message) =>
-        message.role === "user" || message.role === "assistant"
-          ? [{ role: message.role, content: message.content }]
-          : [],
-      )
+    ? getGuestHistory(messages)
     : undefined;
 
   return {
