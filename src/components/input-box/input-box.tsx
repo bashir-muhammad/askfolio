@@ -46,12 +46,17 @@ const InputBox = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-guest-chat-count": String(isGuest ? guestChatsUsed : 0),
         },
-        body: JSON.stringify({ content: message }),
+        body: JSON.stringify({
+          content: message,
+          guestChatCount: isGuest ? guestChatsUsed : 0,
+        }),
       });
 
       if (!response.ok || !response.body) {
-        throw new Error("Chat request failed.");
+        const errorPayload = await response.json().catch(() => null);
+        throw new Error(errorPayload?.error ?? "Chat request failed.");
       }
 
       addChatMessageToChat(chatId, "", "assistant");
@@ -70,8 +75,12 @@ const InputBox = () => {
       assistantMessage += decoder.decode();
       updateLastBotMessage(chatId, assistantMessage);
       setMessageContent("");
-    } catch {
-      setErrorMessage("Failed to send message. Please try again.");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to send message. Please try again.";
+      setErrorMessage(message);
     } finally {
       setIsSending(false);
       if (isGuest) {
@@ -101,7 +110,7 @@ const InputBox = () => {
     <>
       {status === "unauthenticated" && (
         <div className="mb-2 flex w-full items-center justify-center">
-          <div className="flex items-center gap-2 border px-2 rounded-full bg-white">
+          <div className="flex items-center gap-2 rounded-full border bg-white px-2">
             <p className="pl-3 text-sm text-[#625d70]">
               {remainingGuestChats} of {GUEST_CHAT_LIMIT} free queries remaining
             </p>
@@ -128,9 +137,7 @@ const InputBox = () => {
             aria-describedby={errorMessage ? "chat-error" : undefined}
             className="min-h-11 rounded-xl border-0 bg-transparent px-3 py-2.5 text-sm shadow-none placeholder:text-[#9993a8] focus-visible:ring-0 md:text-sm"
           />
-          {errorMessage && (
-            <FieldError id="chat-error">{errorMessage}</FieldError>
-          )}
+          {errorMessage && <FieldError id="chat-error">{errorMessage}</FieldError>}
         </Field>
         <Button
           variant="default"
