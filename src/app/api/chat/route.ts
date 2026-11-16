@@ -12,10 +12,11 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 20;
 const GUEST_CHAT_LIMIT = 3;
+const MAX_HISTORY_CHARACTERS = 20_000;
 const RATE_LIMIT_STORE = new Map<string, { count: number; resetAt: number }>();
 
 function getConversationHistory(messages: StoredMessage[]) {
-  const history: { role: "user" | "model"; parts: { text: string }[] }[] = [];
+  const turns: Array<{ user: string; assistant: string }> = [];
   let pendingUserMessage: string | null = null;
 
   for (const message of messages) {
@@ -25,16 +26,49 @@ function getConversationHistory(messages: StoredMessage[]) {
 
     if (message.role === "user") {
       pendingUserMessage = message.content;
+    } else if (pendingUserMessage !== null) {
+      turns.push({ user: pendingUserMessage, assistant: message.content });
+      pendingUserMessage = null;
+    }
+  }
+
+  const selectedTurns: Array<{ user: string; assistant: string }> = [];
+  let remainingCharacters = MAX_HISTORY_CHARACTERS;
+
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    const turn = turns[index];
+    const turnLength = turn.user.length + turn.assistant.length;
+
+    if (turnLength <= remainingCharacters) {
+      selectedTurns.unshift(turn);
+      remainingCharacters -= turnLength;
       continue;
     }
 
-    if (pendingUserMessage !== null) {
-      history.push(
-        { role: "user", parts: [{ text: pendingUserMessage }] },
-        { role: "model", parts: [{ text: message.content }] },
+    if (remainingCharacters >= 2) {
+      const userLength = Math.min(
+        turn.user.length,
+        Math.floor(remainingCharacters / 2),
       );
-      pendingUserMessage = null;
+      const assistantLength = Math.min(
+        turn.assistant.length,
+        remainingCharacters - userLength,
+      );
+      selectedTurns.unshift({
+        user: userLength > 0 ? turn.user.slice(-userLength) : "",
+        assistant:
+          assistantLength > 0 ? turn.assistant.slice(-assistantLength) : "",
+      });
     }
+    break;
+  }
+
+  const history: { role: "user" | "model"; parts: { text: string }[] }[] = [];
+  for (const turn of selectedTurns) {
+    history.push(
+      { role: "user", parts: [{ text: turn.user }] },
+      { role: "model", parts: [{ text: turn.assistant }] },
+    );
   }
 
   return history;
