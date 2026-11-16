@@ -27,7 +27,7 @@ const UserMessage = ({ message, userName, userImage }: UserMessageProps) => {
             )}
           </span>
         </div>
-        <p className="rounded-2xl rounded-tr-md bg-[#4932c4] px-5 py-3 text-sm leading-6 text-white shadow-[0_5px_16px_rgba(73,50,196,0.16)]">
+        <p className="rounded-2xl rounded-tr-sm bg-[#4932c4] px-5 py-3 text-sm leading-6 text-white shadow-[0_5px_16px_rgba(73,50,196,0.16)]">
           {message}
         </p>
       </div>
