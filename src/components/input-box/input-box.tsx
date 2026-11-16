@@ -1,6 +1,7 @@
 "use client";
 
-import { SubmitEvent, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { KeyboardEvent, SubmitEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowUp } from "lucide-react";
@@ -16,15 +17,35 @@ const InputBox = () => {
   const [messageContent, setMessageContent] = useState("");
   const addChatMessage = useChatStore((s) => s.addChatMessage);
   const addChatMessageToChat = useChatStore((s) => s.addChatMessageToChat);
+  const removeChatMessages = useChatStore((s) => s.removeChatMessages);
   const beginGuestChat = useChatStore((s) => s.beginGuestChat);
   const endGuestChat = useChatStore((s) => s.endGuestChat);
   const guestChatsUsed = useChatStore((s) => s.guestChatsUsed);
-  const updateLastBotMessage = useChatStore((s) => s.updateLastBotMessage);
+  const updateChatMessage = useChatStore((s) => s.updateChatMessage);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const activeRequestController = useRef<AbortController | null>(null);
   const remainingGuestChats = Math.max(GUEST_CHAT_LIMIT - guestChatsUsed, 0);
   const guestLimitReached =
     status === "unauthenticated" && guestChatsUsed >= GUEST_CHAT_LIMIT;
+
+  useEffect(
+    () => () => {
+      activeRequestController.current?.abort();
+    },
+    [],
+  );
+
+  const onMessageKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  };
 
   const onSendMessage = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -42,21 +63,29 @@ const InputBox = () => {
     const activeChat = storeState.chats.find(
       (chat) => chat.id === storeState.activeChatId,
     );
-    const chatId = addChatMessage(message);
+    const { chatId, messageId } = addChatMessage(message);
+    const optimisticMessageIds = [messageId];
+    const originalTitle = activeChat?.title ?? "New Chat";
+    let completed = false;
+    const controller = new AbortController();
+    activeRequestController.current = controller;
     setErrorMessage("");
     setIsSending(true);
 
     try {
       const response = await fetch(
         "/api/chat",
-        buildChatRequestInit({
-          content: message,
-          chatId,
-          title: activeChat?.title,
-          messages: activeChat?.messages ?? [],
-          isGuest,
-          guestChatsUsed,
-        }),
+        {
+          ...buildChatRequestInit({
+            content: message,
+            chatId,
+            title: activeChat?.title,
+            messages: activeChat?.messages ?? [],
+            isGuest,
+            guestChatsUsed,
+          }),
+          signal: controller.signal,
+        },
       );
 
       if (!response.ok || !response.body) {
@@ -64,7 +93,15 @@ const InputBox = () => {
         throw new Error(errorPayload?.error ?? "Chat request failed.");
       }
 
-      addChatMessageToChat(chatId, "", "assistant");
+      const assistantMessageId = addChatMessageToChat(
+        chatId,
+        "",
+        "assistant",
+      );
+      if (!assistantMessageId) {
+        throw new Error("Unable to add the assistant response to this chat.");
+      }
+      optimisticMessageIds.push(assistantMessageId);
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let assistantMessage = "";
@@ -74,22 +111,29 @@ const InputBox = () => {
         if (done) break;
 
         assistantMessage += decoder.decode(value, { stream: true });
-        updateLastBotMessage(chatId, assistantMessage);
+        updateChatMessage(chatId, assistantMessageId, assistantMessage);
       }
 
       assistantMessage += decoder.decode();
-      updateLastBotMessage(chatId, assistantMessage);
+      updateChatMessage(chatId, assistantMessageId, assistantMessage);
+      completed = true;
       setMessageContent("");
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to send message. Please try again.";
-      setErrorMessage(message);
+      removeChatMessages(chatId, optimisticMessageIds, originalTitle);
+      if (!controller.signal.aborted) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to send message. Please try again.";
+        setErrorMessage(message);
+      }
     } finally {
       setIsSending(false);
       if (isGuest) {
-        endGuestChat();
+        endGuestChat(completed);
+      }
+      if (activeRequestController.current === controller) {
+        activeRequestController.current = null;
       }
     }
   };
@@ -119,7 +163,11 @@ const InputBox = () => {
             <p className="pl-3 text-sm text-[#625d70]">
               {remainingGuestChats} of {GUEST_CHAT_LIMIT} free queries remaining
             </p>
-            <Button variant="link" onClick={() => router.push("/login")}>
+            <Button
+              type="button"
+              variant="link"
+              onClick={() => router.push("/login")}
+            >
               Sign in
             </Button>
           </div>
@@ -130,7 +178,7 @@ const InputBox = () => {
         className="mx-auto flex w-full max-w-5xl items-end gap-3 rounded-2xl border border-[#e9e5f2] bg-white p-3 shadow-[0_8px_30px_rgba(47,37,96,0.07)] sm:p-4"
       >
         <Field className="min-w-0">
-          <FieldLabel htmlFor="message" className="hidden">
+          <FieldLabel htmlFor="message" className="sr-only">
             Message input
           </FieldLabel>
           <Textarea
@@ -138,10 +186,19 @@ const InputBox = () => {
             placeholder="Type your message here..."
             value={messageContent}
             onChange={(event) => setMessageContent(event.target.value)}
+            onKeyDown={onMessageKeyDown}
             disabled={isSending}
-            aria-describedby={errorMessage ? "chat-error" : undefined}
+            aria-describedby={
+              errorMessage ? "message-hint chat-error" : "message-hint"
+            }
             className="min-h-11 rounded-xl border-0 bg-transparent px-3 py-2.5 text-sm shadow-none placeholder:text-[#9993a8] focus-visible:ring-0 md:text-sm"
           />
+          <p
+            id="message-hint"
+            className="px-3 text-xs text-[#9993a8]"
+          >
+            Enter to send; Shift+Enter for a new line.
+          </p>
           {errorMessage && <FieldError id="chat-error">{errorMessage}</FieldError>}
         </Field>
         <Button
