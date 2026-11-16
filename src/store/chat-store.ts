@@ -24,6 +24,7 @@ export type ChatStore = {
   guestChatInProgress: boolean;
   createNewChat: () => void;
   setActiveChat: (chatId: string) => void;
+  hydrateServerChats: (serverChats: Chat[]) => void;
   beginGuestChat: () => boolean;
   endGuestChat: () => void;
   addChatMessage: (content: string, role?: Role) => string;
@@ -78,6 +79,12 @@ export const useChatStore = create<ChatStore>()(
             ? { activeChatId: chatId }
             : state,
         );
+      },
+      hydrateServerChats: (serverChats: Chat[]) => {
+        set({
+          chats: serverChats,
+          activeChatId: serverChats[0]?.id ?? null,
+        });
       },
       beginGuestChat: () => {
         let started = false;

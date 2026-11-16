@@ -10,7 +10,7 @@ AskFolio is an AI chat MVP. Users can create and switch between chat threads, se
 - Keep each reply associated with the chat that started the request.
 
 
-> **Current limitation:** Chats are held in client-side memory only. They are lost when the page is refreshed, and conversations are not yet saved to local storage or a backend. Each API request sends only the latest user message; prior messages in the thread are not sent as conversation context.
+> **Current limitation:** Guest chats are held in session storage and are lost when the browser session ends. Signed-in chat history is stored in a local JSON file, which is not suitable for multi-instance production deployments.
 
 ## Requirements
 
@@ -47,8 +47,8 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Message flow
 
 1. The user submits a message. The client adds it to the active chat and creates a chat if needed.
-2. The input box sends the message content to `POST /api/chat`.
-3. The route requests a streamed response from Gemini and streams text chunks back to the client.
+2. The input box sends the message content and active thread ID to `POST /api/chat`. Guest requests also include the current thread history.
+3. The route loads the signed-in user's thread history (or uses the guest thread history), sends up to 20,000 characters of the most recent complete turns plus the new message to Gemini, and streams response chunks back to the client.
 4. The client creates an assistant message and updates it as each chunk arrives.
 5. The assistant message remains in the chat that initiated the request, even if the user switches chats.
 

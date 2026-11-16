@@ -8,6 +8,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { GUEST_CHAT_LIMIT, useChatStore } from "@/store/chat-store";
+import { buildChatRequestInit } from "@/lib/chat-request";
 
 const InputBox = () => {
   const { status } = useSession();
@@ -37,21 +38,30 @@ const InputBox = () => {
       return;
     }
 
+    const storeState = useChatStore.getState();
+    const activeChat = storeState.chats.find(
+      (chat) => chat.id === storeState.activeChatId,
+    );
     const chatId = addChatMessage(message);
     setErrorMessage("");
     setIsSending(true);
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ content: message }),
-      });
+      const response = await fetch(
+        "/api/chat",
+        buildChatRequestInit({
+          content: message,
+          chatId,
+          title: activeChat?.title,
+          messages: activeChat?.messages ?? [],
+          isGuest,
+          guestChatsUsed,
+        }),
+      );
 
       if (!response.ok || !response.body) {
-        throw new Error("Chat request failed.");
+        const errorPayload = await response.json().catch(() => null);
+        throw new Error(errorPayload?.error ?? "Chat request failed.");
       }
 
       addChatMessageToChat(chatId, "", "assistant");
@@ -70,8 +80,12 @@ const InputBox = () => {
       assistantMessage += decoder.decode();
       updateLastBotMessage(chatId, assistantMessage);
       setMessageContent("");
-    } catch {
-      setErrorMessage("Failed to send message. Please try again.");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to send message. Please try again.";
+      setErrorMessage(message);
     } finally {
       setIsSending(false);
       if (isGuest) {
@@ -101,7 +115,7 @@ const InputBox = () => {
     <>
       {status === "unauthenticated" && (
         <div className="mb-2 flex w-full items-center justify-center">
-          <div className="flex items-center gap-2 border px-2 rounded-full bg-white">
+          <div className="flex items-center gap-2 rounded-full border bg-white px-2">
             <p className="pl-3 text-sm text-[#625d70]">
               {remainingGuestChats} of {GUEST_CHAT_LIMIT} free queries remaining
             </p>
@@ -128,9 +142,7 @@ const InputBox = () => {
             aria-describedby={errorMessage ? "chat-error" : undefined}
             className="min-h-11 rounded-xl border-0 bg-transparent px-3 py-2.5 text-sm shadow-none placeholder:text-[#9993a8] focus-visible:ring-0 md:text-sm"
           />
-          {errorMessage && (
-            <FieldError id="chat-error">{errorMessage}</FieldError>
-          )}
+          {errorMessage && <FieldError id="chat-error">{errorMessage}</FieldError>}
         </Field>
         <Button
           variant="default"
