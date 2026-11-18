@@ -4,17 +4,41 @@ import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, SubmitEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, ChevronDownIcon, Globe2, Sparkles } from "lucide-react";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { GUEST_CHAT_LIMIT, useChatStore } from "@/store/chat-store";
 import { buildChatRequestInit } from "@/lib/chat-request";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { Switch } from "../ui/switch";
+import { InputGroupButton } from "../ui/input-group";
+import { Label } from "../ui/label";
+
+const providers = [
+  {
+    name: "Google",
+    models: [
+      { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite" },
+      { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash" },
+    ],
+  },
+];
+
 
 const InputBox = () => {
   const { status } = useSession();
   const router = useRouter();
   const [messageContent, setMessageContent] = useState("");
+  const [model, setModel] = useState("gemini-3.5-flash-lite");
   const addChatMessage = useChatStore((s) => s.addChatMessage);
   const addChatMessageToChat = useChatStore((s) => s.addChatMessageToChat);
   const removeChatMessages = useChatStore((s) => s.removeChatMessages);
@@ -73,31 +97,24 @@ const InputBox = () => {
     setIsSending(true);
 
     try {
-      const response = await fetch(
-        "/api/chat",
-        {
-          ...buildChatRequestInit({
-            content: message,
-            chatId,
-            title: activeChat?.title,
-            messages: activeChat?.messages ?? [],
-            isGuest,
-            guestChatsUsed,
-          }),
-          signal: controller.signal,
-        },
-      );
+      const response = await fetch("/api/chat", {
+        ...buildChatRequestInit({
+          content: message,
+          chatId,
+          title: activeChat?.title,
+          messages: activeChat?.messages ?? [],
+          isGuest,
+          guestChatsUsed,
+        }),
+        signal: controller.signal,
+      });
 
       if (!response.ok || !response.body) {
         const errorPayload = await response.json().catch(() => null);
         throw new Error(errorPayload?.error ?? "Chat request failed.");
       }
 
-      const assistantMessageId = addChatMessageToChat(
-        chatId,
-        "",
-        "assistant",
-      );
+      const assistantMessageId = addChatMessageToChat(chatId, "", "assistant");
       if (!assistantMessageId) {
         throw new Error("Unable to add the assistant response to this chat.");
       }
@@ -142,7 +159,8 @@ const InputBox = () => {
     return (
       <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-3 rounded-2xl border border-[#e9e5f2] bg-white p-4 text-center shadow-[0_8px_30px_rgba(47,37,96,0.07)] sm:flex-row sm:px-6 sm:text-left">
         <p className="text-sm text-[#625d70]">
-          You&apos;ve used your {GUEST_CHAT_LIMIT} free chats. Sign in to continue chatting.
+          You&apos;ve used your {GUEST_CHAT_LIMIT} free chats. Sign in to
+          continue chatting.
         </p>
         <Button
           type="button"
@@ -175,9 +193,9 @@ const InputBox = () => {
       )}
       <form
         onSubmit={onSendMessage}
-        className="mx-auto flex w-full max-w-5xl items-end gap-3 rounded-2xl border border-[#e9e5f2] bg-white p-3 shadow-[0_8px_30px_rgba(47,37,96,0.07)] sm:p-4"
+        className="mx-auto flex flex-col w-full max-w-5xl items-end gap-3 rounded-2xl border border-[#e9e5f2] bg-white p-3 shadow-[0_8px_30px_rgba(47,37,96,0.07)] sm:p-4"
       >
-        <Field className="min-w-0">
+        <Field className="">
           <FieldLabel htmlFor="message" className="sr-only">
             Message input
           </FieldLabel>
@@ -193,24 +211,74 @@ const InputBox = () => {
             }
             className="min-h-11 rounded-xl border-0 bg-transparent px-3 py-2.5 text-sm shadow-none placeholder:text-[#9993a8] focus-visible:ring-0 md:text-sm"
           />
-          <p
-            id="message-hint"
-            className="px-3 text-xs text-[#9993a8]"
-          >
-            Enter to send; Shift+Enter for a new line.
-          </p>
-          {errorMessage && <FieldError id="chat-error">{errorMessage}</FieldError>}
         </Field>
-        <Button
-          variant="default"
-          type="submit"
-          size="icon-lg"
-          disabled={isSending}
-          aria-label="Send message"
-          className="size-11 rounded-xl bg-[#4932c4] text-white shadow-sm shadow-[#4932c4]/20 hover:bg-[#3924ad]"
-        >
-          <ArrowUp />
-        </Button>
+        <div className="flex w-full items-center gap-2">
+          <Label
+            htmlFor="web-search"
+            className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-transparent bg-[#f5f3fa] px-2.5 text-xs font-medium text-[#625d70] transition-colors hover:border-[#ded9e8] hover:bg-[#efecf6]"
+          >
+            <Globe2 className="size-3.5" />
+            <span className="sr-only">Web</span>
+            <Switch id="web-search" size="sm" className="ml-0.5" />
+          </Label>
+
+          <Field className="w-fit shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <InputGroupButton
+                    size="sm"
+                    className="h-8 w-fit whitespace-nowrap rounded-full border border-transparent bg-[#f5f3fa] px-2.5 text-xs font-medium text-[#625d70] hover:border-[#ded9e8] hover:bg-[#efecf6]"
+                  />
+                }
+              >
+                <Sparkles className="size-3.5 text-[#4932c4]" />
+                <span>{model}</span>
+                <ChevronDownIcon className="size-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuRadioGroup value={model} onValueChange={setModel}>
+                  {providers.map((provider) => (
+                    <>
+                      <DropdownMenuGroup>
+                        <DropdownMenuLabel className="sr-only">
+                          {provider.name}
+                        </DropdownMenuLabel>
+                        {provider.models.map((model) => (
+                          <>
+                            <DropdownMenuRadioItem
+                              value={model.name}
+                              closeOnClick
+                            >
+                              {model.name}
+                            </DropdownMenuRadioItem>
+                          </>
+                        ))}
+                      </DropdownMenuGroup>
+                    </>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Field>
+
+          <Button
+            variant="default"
+            type="submit"
+            size="icon-lg"
+            disabled={isSending}
+            aria-label="Send message"
+            className="ml-auto size-10 rounded-full bg-[#4932c4] text-white shadow-sm shadow-[#4932c4]/20 hover:bg-[#3924ad]"
+          >
+            <ArrowUp className="size-5" />
+          </Button>
+        </div>
+
+        {errorMessage && (
+          <div className="w-full">
+            <FieldError id="chat-error">{errorMessage}</FieldError>
+          </div>
+        )}
       </form>
     </>
   );
