@@ -10,6 +10,11 @@ import {
   parseGuestHistory,
   toGeminiHistory,
 } from "@/lib/conversation-history";
+import {
+  DEFAULT_CHAT_MODEL,
+  isChatModelId,
+  type ChatModelId,
+} from "@/lib/chat-models";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -88,6 +93,17 @@ export async function POST(req: Request) {
     );
   }
 
+  const requestedModel = "model" in body ? body.model : undefined;
+  if (requestedModel !== undefined && !isChatModelId(requestedModel)) {
+    return Response.json(
+      { error: "The selected model is invalid." },
+      { status: 400 },
+    );
+  }
+  const modelId: ChatModelId = isChatModelId(requestedModel)
+    ? requestedModel
+    : DEFAULT_CHAT_MODEL;
+
   const isAuthenticated = Boolean(session?.user?.email);
   const guestUsageCount = getGuestUsageCount(body, req);
 
@@ -147,7 +163,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
+    const model = genAI.getGenerativeModel({ model: modelId });
     const chat = model.startChat({
       history: toGeminiHistory(conversationHistory),
     });

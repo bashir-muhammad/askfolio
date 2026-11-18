@@ -22,23 +22,17 @@ import {
 import { Switch } from "../ui/switch";
 import { InputGroupButton } from "../ui/input-group";
 import { Label } from "../ui/label";
-
-const providers = [
-  {
-    name: "Google",
-    models: [
-      { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite" },
-      { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash" },
-    ],
-  },
-];
-
+import {
+  CHAT_MODEL_PROVIDERS,
+  DEFAULT_CHAT_MODEL,
+  type ChatModelId,
+} from "@/lib/chat-models";
 
 const InputBox = () => {
   const { status } = useSession();
   const router = useRouter();
   const [messageContent, setMessageContent] = useState("");
-  const [model, setModel] = useState("gemini-3.5-flash-lite");
+  const [model, setModel] = useState<ChatModelId>(DEFAULT_CHAT_MODEL);
   const addChatMessage = useChatStore((s) => s.addChatMessage);
   const addChatMessageToChat = useChatStore((s) => s.addChatMessageToChat);
   const removeChatMessages = useChatStore((s) => s.removeChatMessages);
@@ -49,6 +43,11 @@ const InputBox = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const activeRequestController = useRef<AbortController | null>(null);
+  const selectedModelName =
+    CHAT_MODEL_PROVIDERS
+      .flatMap((provider) => provider.models)
+      .find((providerModel) => providerModel.id === model)?.name ??
+    CHAT_MODEL_PROVIDERS[0].models[0].name;
   const remainingGuestChats = Math.max(GUEST_CHAT_LIMIT - guestChatsUsed, 0);
   const guestLimitReached =
     status === "unauthenticated" && guestChatsUsed >= GUEST_CHAT_LIMIT;
@@ -105,6 +104,7 @@ const InputBox = () => {
           messages: activeChat?.messages ?? [],
           isGuest,
           guestChatsUsed,
+          model,
         }),
         signal: controller.signal,
       });
@@ -233,12 +233,12 @@ const InputBox = () => {
                 }
               >
                 <Sparkles className="size-3.5 text-[#4932c4]" />
-                <span>{model}</span>
+                <span>{selectedModelName}</span>
                 <ChevronDownIcon className="size-3.5" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
                 <DropdownMenuRadioGroup value={model} onValueChange={setModel}>
-                  {providers.map((provider) => (
+                  {CHAT_MODEL_PROVIDERS.map((provider) => (
                     <>
                       <DropdownMenuGroup>
                         <DropdownMenuLabel className="sr-only">
@@ -247,7 +247,7 @@ const InputBox = () => {
                         {provider.models.map((model) => (
                           <>
                             <DropdownMenuRadioItem
-                              value={model.name}
+                              value={model.id}
                               closeOnClick
                             >
                               {model.name}
