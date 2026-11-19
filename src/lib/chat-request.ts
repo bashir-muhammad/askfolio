@@ -1,5 +1,6 @@
 import type { Message } from "@/store/chat-store";
 import type { ConversationMessage } from "@/lib/conversation-history";
+import type { ChatModelId } from "@/lib/chat-models";
 
 interface BuildChatRequestInput {
   content: string;
@@ -7,6 +8,8 @@ interface BuildChatRequestInput {
   title?: string;
   messages: Message[];
   isGuest: boolean;
+  model: ChatModelId;
+  webSearch: boolean;
   guestChatsUsed: number;
 }
 
@@ -25,6 +28,8 @@ export function buildChatRequestInit({
   messages,
   isGuest,
   guestChatsUsed,
+  model,
+  webSearch,
 }: BuildChatRequestInput): RequestInit {
   const history = isGuest
     ? getGuestHistory(messages)
@@ -42,6 +47,8 @@ export function buildChatRequestInit({
       title,
       history,
       guestChatCount: isGuest ? guestChatsUsed : 0,
+      model,
+      webSearch,
     }),
   };
 }

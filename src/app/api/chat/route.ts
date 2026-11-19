@@ -10,6 +10,11 @@ import {
   parseGuestHistory,
   toGeminiHistory,
 } from "@/lib/conversation-history";
+import {
+  DEFAULT_CHAT_MODEL,
+  isChatModelId,
+  type ChatModelId,
+} from "@/lib/chat-models";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -63,6 +68,15 @@ function getGuestUsageCount(body: unknown, req: Request) {
   return Number.isFinite(candidate) ? candidate : NaN;
 }
 
+function isQuotaExceededError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    error.status === 429
+  );
+}
+
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   const body: unknown = await req.json();
@@ -87,6 +101,26 @@ export async function POST(req: Request) {
       { status: 413 },
     );
   }
+
+  const requestedModel = "model" in body ? body.model : undefined;
+  if (requestedModel !== undefined && !isChatModelId(requestedModel)) {
+    return Response.json(
+      { error: "The selected model is invalid." },
+      { status: 400 },
+    );
+  }
+  const modelId: ChatModelId = isChatModelId(requestedModel)
+    ? requestedModel
+    : DEFAULT_CHAT_MODEL;
+
+  const webSearchValue = "webSearch" in body ? body.webSearch : false;
+  if (typeof webSearchValue !== "boolean") {
+    return Response.json(
+      { error: "The web search option is invalid." },
+      { status: 400 },
+    );
+  }
+  const webSearchEnabled = webSearchValue;
 
   const isAuthenticated = Boolean(session?.user?.email);
   const guestUsageCount = getGuestUsageCount(body, req);
@@ -147,10 +181,32 @@ export async function POST(req: Request) {
       });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
+    const model = genAI.getGenerativeModel({
+      model: modelId,
+      ...(webSearchEnabled
+        ? { tools: [{ googleSearchRetrieval: {} }] }
+        : {}),
+    });
     const chat = model.startChat({
       history: toGeminiHistory(conversationHistory),
     });
+
+    if (webSearchEnabled) {
+      const result = await chat.sendMessage(content);
+      const responseText = result.response.text();
+
+      if (session?.user?.email) {
+        await upsertChatMessage(session.user.email, {
+          chatId,
+          title,
+          role: "assistant",
+          content: responseText,
+        });
+      }
+
+      return new NextResponse(responseText);
+    }
+
     const geminiStream = await chat.sendMessageStream(content);
     const responseChunks: string[] = [];
 
@@ -181,6 +237,17 @@ export async function POST(req: Request) {
 
     return new NextResponse(responseStream);
   } catch (error) {
+    if (isQuotaExceededError(error)) {
+      console.error("Gemini API quota exceeded:", error);
+      return Response.json(
+        {
+          error:
+            "Gemini API quota is currently exhausted. Please check the API project's rate limits and billing, then try again.",
+        },
+        { status: 429 },
+      );
+    }
+
     console.error("Gemini request failed:", error);
     return Response.json(
       { error: "The response could not be completed. Please try again." },
