@@ -9,6 +9,7 @@ interface BuildChatRequestInput {
   messages: Message[];
   isGuest: boolean;
   model: ChatModelId;
+  webSearch: boolean;
   guestChatsUsed: number;
 }
 
@@ -28,6 +29,7 @@ export function buildChatRequestInit({
   isGuest,
   guestChatsUsed,
   model,
+  webSearch,
 }: BuildChatRequestInput): RequestInit {
   const history = isGuest
     ? getGuestHistory(messages)
@@ -46,6 +48,7 @@ export function buildChatRequestInit({
       history,
       guestChatCount: isGuest ? guestChatsUsed : 0,
       model,
+      webSearch,
     }),
   };
 }

@@ -33,6 +33,7 @@ const InputBox = () => {
   const router = useRouter();
   const [messageContent, setMessageContent] = useState("");
   const [model, setModel] = useState<ChatModelId>(DEFAULT_CHAT_MODEL);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const addChatMessage = useChatStore((s) => s.addChatMessage);
   const addChatMessageToChat = useChatStore((s) => s.addChatMessageToChat);
   const removeChatMessages = useChatStore((s) => s.removeChatMessages);
@@ -105,6 +106,7 @@ const InputBox = () => {
           isGuest,
           guestChatsUsed,
           model,
+          webSearch: webSearchEnabled,
         }),
         signal: controller.signal,
       });
@@ -219,7 +221,13 @@ const InputBox = () => {
           >
             <Globe2 className="size-3.5" />
             <span className="sr-only">Web</span>
-            <Switch id="web-search" size="sm" className="ml-0.5" />
+            <Switch
+              id="web-search"
+              size="sm"
+              className="ml-0.5"
+              checked={webSearchEnabled}
+              onCheckedChange={setWebSearchEnabled}
+            />
           </Label>
 
           <Field className="w-fit shrink-0">
