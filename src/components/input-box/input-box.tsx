@@ -53,6 +53,12 @@ const InputBox = () => {
   const guestLimitReached =
     status === "unauthenticated" && guestChatsUsed >= GUEST_CHAT_LIMIT;
 
+  useEffect(() => {
+    if (guestLimitReached && !isSending) {
+      router.replace("/login");
+    }
+  }, [guestLimitReached, isSending, router]);
+
   useEffect(
     () => () => {
       activeRequestController.current?.abort();

@@ -10,7 +10,7 @@ AskFolio is an AI chat MVP. Users can create and switch between chat threads, se
 - Keep each reply associated with the chat that started the request.
 
 
-> **Current limitation:** Guest chats are held in session storage and are lost when the browser session ends. Signed-in chat history is stored in a local JSON file, which is not suitable for multi-instance production deployments.
+> **Current limitation:** Guests can send up to three messages per browser session before being redirected to sign in. Guest chats are held in session storage and are lost when the browser session ends. Signed-in chat history is stored in a local JSON file, which is not suitable for multi-instance production deployments.
 
 ## Requirements
 
