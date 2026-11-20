@@ -14,7 +14,7 @@ AskFolio is an AI chat MVP. Users can create and switch between chat threads, se
 
 ## Requirements
 
-- Node.js and npm
+- Node.js 22.x and npm
 - A Google Gemini API key
 
 ## Getting started
