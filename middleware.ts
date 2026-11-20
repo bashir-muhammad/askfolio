@@ -10,5 +10,7 @@ export default withAuth({
 });
 
 export const config = {
-  matcher: ["/((?!\\.swa|api/auth|_next/static|_next/image|favicon.ico|login).*)"],
+  matcher: [
+    "/((?!$|\\.swa|api/auth|api/chat$|_next/static|_next/image|favicon.ico|login).*)",
+  ],
 };
