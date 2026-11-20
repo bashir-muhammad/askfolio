@@ -33,6 +33,7 @@ jobs:
           output_location: "" # Built app content directory - optional
           ###### End of Repository/Build Configurations ######
         env:
+          GEMINI_API_KEY: build-only-placeholder
           GOOGLE_CLIENT_ID: build-only-placeholder
           GOOGLE_CLIENT_SECRET: build-only-placeholder
           NEXTAUTH_SECRET: build-only-placeholder
