@@ -44,6 +44,20 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Azure deployment
+
+The GitHub Actions workflow runs lint, typecheck, and build for pull requests to `main` and pushes to `main` or `feature/*`. Azure deployment runs only after those checks pass: pull requests receive preview environments, and pushes to `main` deploy production. Closing a pull request closes its preview.
+
+To enable deployment:
+
+1. Create an Azure Static Web App on the Free plan without generating an additional GitHub Actions workflow.
+2. Add its deployment token as the repository Actions secret `AZURE_STATIC_WEB_APPS_API_TOKEN_LEMON_WATER_0F770BB10`.
+3. Configure these runtime application settings on the Static Web App: `GEMINI_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `NEXTAUTH_SECRET`. The placeholder values in the workflow are build-only; do not put production secrets in the workflow.
+4. Add `https://<your-app-host>/api/auth/callback/google` as an authorized redirect URI for the Google OAuth client, and set `NEXTAUTH_URL` to the deployed app's origin.
+5. The `main` branch requires the `build (22.x)` status check before merging.
+
+This app requires a Next.js server for its API routes and authentication, so it must use hybrid Next.js hosting rather than static export. Azure Static Web Apps' hybrid Next.js support is currently in preview; review its [feature support and limitations](https://learn.microsoft.com/en-us/azure/static-web-apps/nextjs) before relying on it for production. Forked pull requests cannot access the deployment token, so CI runs for them but Azure preview deployment will not.
+
 ## Message flow
 
 1. The user submits a message. The client adds it to the active chat and creates a chat if needed.
